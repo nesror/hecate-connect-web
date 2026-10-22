@@ -26,7 +26,7 @@ export const MODEL_INFO = {
   type: '三模无线游戏鼠标',
   maxDpi: '26,000 DPI',
   polling: '1,000 Hz',
-  buttons: '5 个可编程按键',
+  buttons: '6 个可编程按键',
   weight: '63 g',
 };
 

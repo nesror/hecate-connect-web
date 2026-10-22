@@ -19,6 +19,7 @@ import { TopBar } from './components/TopBar';
 import { Modal, ToastViewport } from './components/ui';
 import { createDefaultProfile, MODEL_INFO } from './defaults';
 import {
+  BUTTON_META,
   BUTTON_ORDER,
   createDefaultBindings,
   defaultBindingFor,
@@ -281,7 +282,7 @@ export default function App() {
     pushToast({
       tone: 'success',
       title: '已指派宏',
-      detail: `${macro?.name ?? '宏'} → ${button === 'left' ? '左键' : button === 'right' ? '右键' : button === 'wheel' ? '滚轮中键' : button === 'forward' ? '前进键' : '后退键'}`,
+      detail: `${macro?.name ?? '宏'} → ${BUTTON_META[button].label}`,
     });
   };
 
@@ -460,7 +461,7 @@ export default function App() {
                     ? '按键映射已可通过 WebHID 读写；DPI、性能、灯效与宏仍只保存在浏览器。'
                     : device.phase === 'error'
                       ? (device.error ?? '设备连接异常，点击查看诊断信息。')
-                      : '未连接 G3M PRO。设置会保存到本机浏览器；连接后可读写 5 个按键映射。'}
+                      : '未连接 G3M PRO。设置会保存到本机浏览器；连接后可读写 6 个按键映射。'}
                 </span>
               </div>
               <button type="button" onClick={() => setDeviceOpen(true)}>
@@ -576,7 +577,7 @@ export default function App() {
                 <span>CONFIGURATION</span>
                 <strong>{exportTarget.name}</strong>
                 <small>
-                  5 键 · 7 档 DPI · {exportTarget.macros.length} 个宏 ·{' '}
+                  6 键 · 7 档 DPI · {exportTarget.macros.length} 个宏 ·{' '}
                   {POLLING_LABELS[exportTarget.performance.pollingRate]}
                 </small>
               </div>
@@ -744,7 +745,7 @@ export default function App() {
                 <span className="import-preview-count">{importPreview.profile.macros.length} 宏</span>
               </div>
               <div className="import-chips">
-                <span>5 个按键</span>
+                <span>6 个按键</span>
                 <span>7 档 DPI</span>
                 <span>{POLLING_LABELS[importPreview.profile.performance.pollingRate]}</span>
                 <span>{importPreview.profile.dpi.stages.filter((stage) => stage.enabled).length} 个启用档位</span>
@@ -780,7 +781,7 @@ export default function App() {
               <h2>HECATE Connect · Web</h2>
               <p>为 HECATE G3M PRO 制作的浏览器配置界面，复刻桌面驱动的交互与视觉语言。</p>
             </div>
-            <span className="about-version">v1.2</span>
+            <span className="about-version">v1.3</span>
           </div>
 
           <div className="about-callout">
@@ -789,7 +790,7 @@ export default function App() {
               <strong>WebHID 硬件连接（实验性）</strong>
               <p>
                 使用桌面版 Chrome 或 Edge 连接鼠标后，网页可以读取按键表，并在你勾选确认后写入
-                5 个按键映射。握手、读取、写入与回读已在 G3M PRO（VID 320F / PID 706B）上验证。
+                6 个按键映射（含滚轮后方的 DPI 键）。握手、读取、写入与回读已在 G3M PRO（VID 320F / PID 706B）上验证。
                 DPI、性能校准、灯效与宏暂未实现硬件写入，仍只保存在本机浏览器。
                 协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
               </p>

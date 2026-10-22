@@ -120,7 +120,7 @@ export function KeyBindingsPage({
       <PageHeader
         kicker="BUTTON REMAP · G3M PRO"
         title="按键设定"
-        description="点击鼠标示意图上的编号，将 5 个物理按键映射为鼠标、键盘、宏或系统功能。"
+        description="点击鼠标示意图上的编号，将 6 个物理按键映射为鼠标、键盘、宏或系统功能。"
         actions={
           <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
             <RotateCcw size={16} />
@@ -361,7 +361,7 @@ export function KeyBindingsPage({
           <div className="binding-footer">
             <Lock size={14} />
             <span>
-              5 个按键均可改键，仅左键不能设为禁用。
+              6 个按键均可改键，仅左键不能设为禁用。
               <span className="muted"> 更改会即时保存到当前配置文件。</span>
             </span>
           </div>
@@ -388,7 +388,7 @@ export function KeyBindingsPage({
         open={resetOpen}
         onClose={() => setResetOpen(false)}
         title="恢复默认按键？"
-        description="当前配置文件中的 5 个按键将恢复为出厂功能，其他设置不受影响。"
+        description="当前配置文件中的 6 个按键将恢复为出厂功能，其他设置不受影响。"
         size="compact"
         footer={
           <>

@@ -381,7 +381,7 @@ export function MacrosPage({
       <PageHeader
         kicker="MACRO ENGINE · LOCAL"
         title="宏管理"
-        description="录制键盘序列、插入鼠标点击与延迟，并将宏指派给 5 个可编程按键。宏随配置文件保存在浏览器中。"
+        description="录制键盘序列、插入鼠标点击与延迟，并将宏指派给 6 个可编程按键。宏随配置文件保存在浏览器中。"
         actions={
           <button type="button" className="primary-button" onClick={addMacro}>
             <Plus size={16} />

@@ -1,6 +1,6 @@
 export type PageId = 'keys' | 'dpi' | 'performance' | 'lighting' | 'macros';
 
-export type ButtonId = 'left' | 'right' | 'wheel' | 'back' | 'forward';
+export type ButtonId = 'left' | 'right' | 'wheel' | 'back' | 'forward' | 'dpi';
 
 export type MouseFunctionId =
   | 'left'

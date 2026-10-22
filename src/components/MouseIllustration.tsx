@@ -31,6 +31,7 @@ const BADGE_POSITIONS: Record<ButtonId, { x: number; y: number }> = {
   wheel: { x: 211, y: 100 },
   forward: { x: 56, y: 283 },
   back: { x: 54, y: 345 },
+  dpi: { x: 214, y: 211 },
 };
 
 export function MouseIllustration({
@@ -117,9 +118,11 @@ export function MouseIllustration({
           <stop offset="48%" stopColor="#101719" />
           <stop offset="100%" stopColor="#283235" />
         </linearGradient>
-        <linearGradient id={dpiGradient} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#425255" />
-          <stop offset="100%" stopColor="#141c1e" />
+        <linearGradient id={dpiGradient} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#2f7f3f" />
+          <stop offset="38%" stopColor="#8fe88a" />
+          <stop offset="70%" stopColor="#57c463" />
+          <stop offset="100%" stopColor="#276b36" />
         </linearGradient>
         <linearGradient id={logoGradient} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="rgba(235, 255, 251, 0.88)" />
@@ -256,29 +259,52 @@ export function MouseIllustration({
         <rect x="155" y="71" width="50" height="106" rx="25" className="zone-surface wheel-surface" />
       </g>
 
-      <rect
-        x="168"
-        y="44"
-        width="24"
-        height="26"
-        rx="12"
-        fill={`url(#${dpiGradient})`}
-        stroke="rgba(255, 255, 255, 0.08)"
-        strokeWidth="1"
-      />
-      <g className={cx('dpi-led', glow && indicatorEffect === 'breath' && 'is-breathing')}>
-        {glow && <circle cx="180" cy="57" r="16" fill={hexToRgba(glowColor, 0.22)} />}
-        <circle cx="180" cy="57" r="3.4" fill={glow ? glowColor : '#39494b'} />
-        {glow && (
-          <circle
-            cx="180"
-            cy="57"
-            r="7"
-            fill="none"
-            stroke={hexToRgba(glowColor, 0.4)}
-            strokeWidth="1.2"
-          />
+      <g
+        className={cx(
+          'mouse-zone',
+          'zone-dpi',
+          interactive && 'is-interactive',
+          selected === 'dpi' && 'is-selected',
         )}
+        {...zoneProps('dpi')}
+      >
+        <title>DPI 键</title>
+        <rect
+          x="160"
+          y="178"
+          width="40"
+          height="64"
+          rx="20"
+          fill="#0a1113"
+          stroke="rgba(255, 255, 255, 0.06)"
+          strokeWidth="1"
+        />
+        <rect
+          x="167"
+          y="184"
+          width="26"
+          height="46"
+          rx="13"
+          fill={`url(#${dpiGradient})`}
+          stroke="rgba(0, 0, 0, 0.55)"
+          strokeWidth="1.2"
+        />
+        <rect x="171" y="189" width="7" height="33" rx="3.5" fill="rgba(255, 255, 255, 0.22)" />
+        <g className={cx('dpi-led', glow && indicatorEffect === 'breath' && 'is-breathing')}>
+          {glow && <circle cx="180" cy="250" r="16" fill={hexToRgba(glowColor, 0.22)} />}
+          <circle cx="180" cy="250" r="3.2" fill={glow ? glowColor : '#39494b'} />
+          {glow && (
+            <circle
+              cx="180"
+              cy="250"
+              r="6.5"
+              fill="none"
+              stroke={hexToRgba(glowColor, 0.4)}
+              strokeWidth="1.2"
+            />
+          )}
+        </g>
+        <rect x="160" y="178" width="40" height="64" rx="20" className="zone-surface" />
       </g>
 
       <g

@@ -44,7 +44,7 @@ const NAV_ITEMS: Array<{
   hint: string;
   icon: typeof Mouse;
 }> = [
-  { id: 'keys', label: '按键设定', hint: '5 键', icon: Mouse },
+  { id: 'keys', label: '按键设定', hint: '6 键', icon: Mouse },
   { id: 'dpi', label: 'DPI 设置', hint: '7 档', icon: Crosshair },
   { id: 'performance', label: '性能与校准', hint: '', icon: Gauge },
   { id: 'lighting', label: '灯效', hint: 'DPI 灯', icon: Lightbulb },
@@ -250,7 +250,7 @@ export function Sidebar({
             </span>
           </div>
           <div className="sidebar-version">
-            <span>WEB CONFIG v1.2</span>
+            <span>WEB CONFIG v1.3</span>
             <span>非官方</span>
           </div>
         </div>

@@ -93,7 +93,7 @@ function statusCopy(device: HecateController): {
   return {
     tone: 'is-offline',
     title: '尚未连接鼠标',
-    detail: '网页会先读取设备头与按键表，只有在你确认后才会写入 5 个按键映射。',
+    detail: '网页会先读取设备头与按键表，只有在你确认后才会写入 6 个按键映射。',
   };
 }
 
@@ -154,7 +154,7 @@ export function DeviceModal({
     notify({
       tone: 'success',
       title: '已从鼠标读取按键',
-      detail: '当前配置的 5 个按键已更新，设置会保存到本机浏览器。',
+      detail: '当前配置的 6 个按键已更新，设置会保存到本机浏览器。',
     });
   };
 
@@ -475,7 +475,7 @@ export function DeviceModal({
               <div className="device-write-head">
                 <ShieldCheck size={17} />
                 <div>
-                  <strong>写入 5 个按键映射</strong>
+                  <strong>写入 6 个按键映射</strong>
                   <p>
                     写入槽位 0–4，其余 {Math.max(0, keyCount - 5)} 个设备按键槽位保持读取到的原值。
                     写入后会重新读取设备进行回读验证。
@@ -501,7 +501,7 @@ export function DeviceModal({
                   onChange={(event) => setConfirmed(event.target.checked)}
                 />
                 <span>
-                  我确认要把当前配置中的 5 个按键映射写入鼠标板载配置。写入过程中请勿拔下鼠标。
+                  我确认要把当前配置中的 6 个按键映射写入鼠标板载配置。写入过程中请勿拔下鼠标。
                 </span>
               </label>
 

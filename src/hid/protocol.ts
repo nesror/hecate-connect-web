@@ -30,6 +30,7 @@ export const BUTTON_SLOTS: ReadonlyArray<{ button: ButtonId; slot: number }> = [
   { button: 'right', slot: 2 },
   { button: 'forward', slot: 3 },
   { button: 'back', slot: 4 },
+  { button: 'dpi', slot: 5 },
 ];
 
 const EMPTY_CHUNK = new Uint8Array(0);

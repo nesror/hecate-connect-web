@@ -28,7 +28,7 @@ export interface FunctionCategory {
   groups: FunctionGroup[];
 }
 
-export const BUTTON_ORDER: ButtonId[] = ['left', 'right', 'wheel', 'forward', 'back'];
+export const BUTTON_ORDER: ButtonId[] = ['left', 'right', 'wheel', 'forward', 'back', 'dpi'];
 
 export const BUTTON_META: Record<
   ButtonId,
@@ -39,6 +39,7 @@ export const BUTTON_META: Record<
   wheel: { label: '滚轮中键', shortLabel: '滚轮', description: '滚轮按下动作', index: 3 },
   forward: { label: '侧键 · 前进', shortLabel: '前进', description: '左侧靠近前端的侧键', index: 4 },
   back: { label: '侧键 · 后退', shortLabel: '后退', description: '左侧靠近后端的侧键', index: 5 },
+  dpi: { label: 'DPI 键', shortLabel: 'DPI', description: '滚轮后方的 DPI 切换键', index: 6 },
 };
 
 const MOUSE_OPTIONS: FunctionOption[] = [
@@ -302,6 +303,8 @@ export function defaultBindingFor(button: ButtonId): Binding {
       return buildBinding('mouse', 'forward', []);
     case 'back':
       return buildBinding('mouse', 'back', []);
+    case 'dpi':
+      return buildBinding('dpi', 'cycle', []);
   }
 }
 
@@ -312,6 +315,7 @@ export function createDefaultBindings(): Record<ButtonId, Binding> {
     wheel: defaultBindingFor('wheel'),
     forward: defaultBindingFor('forward'),
     back: defaultBindingFor('back'),
+    dpi: defaultBindingFor('dpi'),
   };
 }
 
@@ -322,8 +326,8 @@ export const VENDOR_ASSIGNMENTS: Record<string, number> = {
   'mouse:forward': 1052673,
   'mouse:back': 1050625,
   'dpi:up': 1245440,
-  'dpi:down': 1245952,
-  'dpi:cycle': 1245696,
+  'dpi:down': 1245696,
+  'dpi:cycle': 1245952,
 };
 
 const VENDOR_REVERSE: Record<number, Binding> = {
@@ -333,8 +337,8 @@ const VENDOR_REVERSE: Record<number, Binding> = {
   1052673: { kind: 'mouse', id: 'forward', label: '前进' },
   1050625: { kind: 'mouse', id: 'back', label: '后退' },
   1245440: { kind: 'dpi', id: 'up', label: 'DPI +' },
-  1245952: { kind: 'dpi', id: 'down', label: 'DPI −' },
-  1245696: { kind: 'dpi', id: 'cycle', label: 'DPI 循环' },
+  1245696: { kind: 'dpi', id: 'down', label: 'DPI −' },
+  1245952: { kind: 'dpi', id: 'cycle', label: 'DPI 循环' },
 };
 
 export function vendorCodeForBinding(binding: Binding): number {
