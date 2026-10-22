@@ -24,6 +24,7 @@ import {
   createDefaultBindings,
   defaultBindingFor,
 } from './functions';
+import type { DeviceSettings } from './hid/profileCodec';
 import { useHecateDevice } from './hid/useHecateDevice';
 import { DpiPage } from './pages/DpiPage';
 import { KeyBindingsPage } from './pages/KeyBindingsPage';
@@ -165,6 +166,20 @@ export default function App() {
 
   const applyDeviceBindings = (bindings: Record<ButtonId, Binding>) => {
     updateActive({ bindings });
+  };
+
+  const applyDeviceSettings = (settings: DeviceSettings) => {
+    updateActive({
+      dpi: { ...settings.dpi, indicator: activeProfile.dpi.indicator },
+      performance: {
+        ...activeProfile.performance,
+        pollingRate: settings.pollingRate,
+        lineCorrection: settings.lineCorrection,
+        rippleCorrection: settings.rippleCorrection,
+        sensorHeight: settings.sensorHeight,
+        buttonDelay: settings.buttonDelay,
+      },
+    });
   };
 
   const addProfile = () => {
@@ -376,10 +391,21 @@ export default function App() {
             profile={activeProfile}
             onChange={updateDpi}
             onNavigateLighting={() => setPage('lighting')}
+            device={device}
+            notify={pushToast}
+            onOpenDevice={() => setDeviceOpen(true)}
           />
         );
       case 'performance':
-        return <PerformancePage profile={activeProfile} onChange={updatePerformance} />;
+        return (
+          <PerformancePage
+            profile={activeProfile}
+            onChange={updatePerformance}
+            device={device}
+            notify={pushToast}
+            onOpenDevice={() => setDeviceOpen(true)}
+          />
+        );
       case 'lighting':
         return (
           <LightingPage
@@ -458,10 +484,10 @@ export default function App() {
                 </strong>
                 <span>
                   {device.phase === 'connected'
-                    ? '按键映射已可通过 WebHID 读写；DPI、性能、灯效与宏仍只保存在浏览器。'
+                    ? '按键、DPI、回报率与传感器设置可写入鼠标；宏、灯效亮度/模式与 Windows 指针设置仍只保存在本地。'
                     : device.phase === 'error'
                       ? (device.error ?? '设备连接异常，点击查看诊断信息。')
-                      : '未连接 G3M PRO。设置会保存到本机浏览器；连接后可读写 6 个按键映射。'}
+                      : '未连接 G3M PRO。设置会保存到本机浏览器；连接后可写入按键、DPI 与性能配置。'}
                 </span>
               </div>
               <button type="button" onClick={() => setDeviceOpen(true)}>
@@ -490,6 +516,7 @@ export default function App() {
         device={device}
         profile={activeProfile}
         onApplyBindings={applyDeviceBindings}
+        onApplyDeviceSettings={applyDeviceSettings}
         notify={pushToast}
       />
 
@@ -781,7 +808,7 @@ export default function App() {
               <h2>HECATE Connect · Web</h2>
               <p>为 HECATE G3M PRO 制作的浏览器配置界面，复刻桌面驱动的交互与视觉语言。</p>
             </div>
-            <span className="about-version">v1.3</span>
+            <span className="about-version">v1.4</span>
           </div>
 
           <div className="about-callout">
@@ -789,9 +816,9 @@ export default function App() {
             <div>
               <strong>WebHID 硬件连接（实验性）</strong>
               <p>
-                使用桌面版 Chrome 或 Edge 连接鼠标后，网页可以读取按键表，并在你勾选确认后写入
-                6 个按键映射（含滚轮后方的 DPI 键）。握手、读取、写入与回读已在 G3M PRO（VID 320F / PID 706B）上验证。
-                DPI、性能校准、灯效与宏暂未实现硬件写入，仍只保存在本机浏览器。
+                使用桌面版 Chrome 或 Edge 连接鼠标后，网页可以读取并写入 6 个按键映射（含滚轮后方的 DPI 键）、
+                7 档 DPI 与档位颜色、当前档位、回报率、LOD、去抖与直线/波纹修正。握手、读取、写入与回读已在
+                G3M PRO（VID 320F / PID 706B）上验证。宏、灯效亮度/模式、Windows 指针与滚轮设置仍只保存在本地。
                 协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
               </p>
             </div>
@@ -802,7 +829,7 @@ export default function App() {
               <span><ShieldCheck size={17} /></span>
               <div>
                 <strong>数据默认留在本机</strong>
-                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。只有你在设备面板中勾选确认后，按键映射才会写入鼠标硬件。</p>
+                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。只有你在设备面板或页面写入按钮中确认后，配置才会写入鼠标硬件。</p>
               </div>
             </div>
             <div className="about-item">

@@ -2,42 +2,29 @@ export type PageId = 'keys' | 'dpi' | 'performance' | 'lighting' | 'macros';
 
 export type ButtonId = 'left' | 'right' | 'wheel' | 'back' | 'forward' | 'dpi';
 
-export type MouseFunctionId =
-  | 'left'
-  | 'right'
-  | 'middle'
-  | 'back'
-  | 'forward'
-  | 'double-click'
-  | 'scroll-up'
-  | 'scroll-down';
+export type MouseFunctionId = 'left' | 'right' | 'middle' | 'back' | 'forward';
 
 export type MediaFunctionId =
+  | 'media-select'
   | 'play-pause'
   | 'stop'
   | 'previous'
   | 'next'
-  | 'volume-up'
   | 'volume-down'
-  | 'mute';
-
-export type SystemFunctionId =
-  | 'lock'
-  | 'sleep'
-  | 'calculator'
-  | 'mail'
+  | 'volume-up'
+  | 'mute'
   | 'browser-home'
+  | 'browser-refresh'
+  | 'browser-stop'
   | 'browser-back'
   | 'browser-forward'
-  | 'browser-refresh'
+  | 'favorites'
   | 'search'
   | 'my-computer'
-  | 'copy'
-  | 'paste'
-  | 'cut'
-  | 'undo'
-  | 'select-all'
-  | 'save';
+  | 'calculator'
+  | 'mail';
+
+export type SystemFunctionId = 'power' | 'sleep' | 'wake';
 
 export type DpiFunctionId = 'up' | 'down' | 'cycle';
 
@@ -76,8 +63,7 @@ export interface PerformanceSettings {
   pollingRate: PollingRate;
   lineCorrection: boolean;
   rippleCorrection: boolean;
-  angleSnap: boolean;
-  sensorHeight: 1 | 2;
+  sensorHeight: 1 | 2 | 3;
   buttonDelay: number;
   pointerSpeed: number;
   enhancePrecision: boolean;

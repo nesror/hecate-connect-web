@@ -53,7 +53,6 @@ export function createDefaultPerformance(): PerformanceSettings {
     pollingRate: 1000,
     lineCorrection: false,
     rippleCorrection: false,
-    angleSnap: false,
     sensorHeight: 1,
     buttonDelay: 4,
     pointerSpeed: 6,

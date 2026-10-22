@@ -169,8 +169,9 @@ export function normalizeProfile(input: unknown, fallbackName = '配置文件'):
       typeof rawPerf.rippleCorrection === 'boolean'
         ? rawPerf.rippleCorrection
         : defaultPerf.rippleCorrection,
-    angleSnap: typeof rawPerf.angleSnap === 'boolean' ? rawPerf.angleSnap : defaultPerf.angleSnap,
-    sensorHeight: rawPerf.sensorHeight === 2 ? (2 as const) : (1 as const),
+    sensorHeight: [1, 2, 3].includes(Number(rawPerf.sensorHeight))
+      ? (Number(rawPerf.sensorHeight) as 1 | 2 | 3)
+      : defaultPerf.sensorHeight,
     buttonDelay: [4, 6, 8, 10, 12].includes(Number(rawPerf.buttonDelay))
       ? Number(rawPerf.buttonDelay)
       : defaultPerf.buttonDelay,
@@ -232,7 +233,7 @@ function stageToVendor(stage: DpiStage) {
 export function createVendorConfig(profile: Profile) {
   const activeColor = hexToRgb(profile.dpi.stages[profile.dpi.activeStage]?.color ?? '#2ee6c5');
   const keyList = BUTTON_ORDER.map((button) => {
-    const assignment = vendorCodeForBinding(profile.bindings[button]);
+      const assignment = vendorCodeForBinding(profile.bindings[button]) ?? 0xa00000;
     return { Assignment: assignment, DefaultAssignment: assignment };
   });
   while (keyList.length < 59) {
@@ -289,7 +290,7 @@ export function createVendorConfig(profile: Profile) {
         LightList: null,
         MacroInfo: null,
         ProfessionalInfo: {
-          angle_set: profile.performance.angleSnap ? 1 : 0,
+          angle_set: 0,
           delay_time: profile.performance.buttonDelay,
           line_correct: profile.performance.lineCorrection ? 1 : 0,
           sensor_height: profile.performance.sensorHeight - 1,
@@ -383,8 +384,8 @@ function profileFromVendor(data: Record<string, unknown>): ImportResult {
   const professional = isRecord(device.ProfessionalInfo) ? device.ProfessionalInfo : {};
   profile.performance.lineCorrection = Number(professional.line_correct) === 1;
   profile.performance.rippleCorrection = Number(professional.wave_correct) === 1;
-  profile.performance.angleSnap = Number(professional.angle_set) === 1;
-  profile.performance.sensorHeight = Number(professional.sensor_height) === 1 ? 2 : 1;
+  const sensorHeight = clamp(Number(professional.sensor_height) || 0, 0, 2);
+  profile.performance.sensorHeight = (sensorHeight + 1) as 1 | 2 | 3;
   const delay = Number(professional.delay_time);
   if ([4, 6, 8, 10, 12].includes(delay)) profile.performance.buttonDelay = delay;
 

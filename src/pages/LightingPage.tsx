@@ -51,7 +51,7 @@ export function LightingPage({ profile, onChange, onNavigateDpi }: LightingPageP
       <PageHeader
         kicker="LIGHTING · DPI INDICATOR"
         title="灯效"
-        description="G3M PRO 的灯光位于滚轮后方，仅作为 DPI 档位指示灯使用。调整模式、亮度并为每个档位指定颜色。"
+        description="G3M PRO 的灯光位于滚轮后方，仅作为 DPI 档位指示灯使用。档位颜色会随 DPI 写入鼠标，亮度与呼吸模式仅保存在浏览器。"
         actions={
           <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
             <RotateCcw size={16} />
@@ -128,7 +128,7 @@ export function LightingPage({ profile, onChange, onNavigateDpi }: LightingPageP
 
           <p className="preview-disclaimer">
             <Info size={14} />
-            预览仅为网页示意，实际亮度与色彩会因鼠标电量、灯光导光结构而略有差异。
+            预览仅为网页示意；档位颜色可随 DPI 写入鼠标，亮度与模式不会写入硬件。
           </p>
         </section>
 
@@ -263,9 +263,9 @@ export function LightingPage({ profile, onChange, onNavigateDpi }: LightingPageP
             <MousePointerClick size={18} />
           </span>
           <div>
-            <span className="section-kicker">NO HARDWARE WRITE</span>
-            <h3>仅预览与保存</h3>
-            <p>灯光参数保存在浏览器配置中；网页版尚未实现 LED 硬件写入，请使用原生驱动应用。</p>
+            <span className="section-kicker">PARTIAL HARDWARE WRITE</span>
+            <h3>颜色可写入</h3>
+            <p>档位颜色随 DPI 配置写入鼠标板载配置；亮度与呼吸模式暂无协议支持，仅保存在浏览器。</p>
           </div>
         </div>
       </div>

@@ -8,12 +8,10 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import {
-  bindingLabel,
-  BUTTON_META,
-} from '../functions';
+import { bindingLabel, BUTTON_META } from '../functions';
 import type { HecateController } from '../hid/useHecateDevice';
 import type { CommandTrace, WriteResult } from '../hid/HecateHid';
+import type { DeviceSettings } from '../hid/profileCodec';
 import {
   assignmentAt,
   assignmentForBinding,
@@ -34,6 +32,7 @@ interface DeviceModalProps {
   device: HecateController;
   profile: Profile;
   onApplyBindings: (bindings: Record<ButtonId, Binding>) => void;
+  onApplyDeviceSettings: (settings: DeviceSettings) => void;
   notify: (toast: Omit<ToastMessage, 'id'>) => void;
 }
 
@@ -80,7 +79,7 @@ function statusCopy(device: HecateController): {
       detail:
         warnings > 0
           ? `已读取设备数据，但存在 ${warnings} 条警告。请在下方诊断信息中确认。`
-          : '按键表已通过 WebHID 读取；写入操作需要你勾选确认后才会执行。',
+          : '按键表、DPI 与性能配置已通过 WebHID 读取；写入操作需要你勾选确认后才会执行。',
     };
   }
   if (device.phase === 'error') {
@@ -93,7 +92,7 @@ function statusCopy(device: HecateController): {
   return {
     tone: 'is-offline',
     title: '尚未连接鼠标',
-    detail: '网页会先读取设备头与按键表，只有在你确认后才会写入 6 个按键映射。',
+    detail: '网页会先读取设备头、按键表与配置块，只有在你确认后才会写入按键、DPI 与性能设置。',
   };
 }
 
@@ -103,6 +102,7 @@ export function DeviceModal({
   device,
   profile,
   onApplyBindings,
+  onApplyDeviceSettings,
   notify,
 }: DeviceModalProps) {
   const [confirmed, setConfirmed] = useState(false);
@@ -118,6 +118,8 @@ export function DeviceModal({
   const connected = device.phase === 'connected';
   const keymap = device.probe?.keymap?.raw ?? null;
   const keyCount = device.probe?.header.parsed.keyCount ?? 0;
+  const profileProbe = device.probe?.profile ?? null;
+  const settings = profileProbe?.settings ?? null;
   const status = statusCopy(device);
   const canRetry = device.phase === 'error' && device.descriptor !== null;
 
@@ -131,45 +133,66 @@ export function DeviceModal({
   const unsupported = rows.filter((row) => row.desiredCode === null);
 
   const deviceBindings = keymap ? bindingsFromKeymap(keymap) : null;
-  const canRead =
-    connected &&
-    deviceBindings !== null &&
-    BUTTON_SLOTS.every(({ button }) => deviceBindings[button] !== null);
-  const canWrite =
-    connected &&
-    keymap !== null &&
-    unsupported.length === 0 &&
-    confirmed &&
-    !device.busy;
+  const canReadBindings = connected && deviceBindings !== null && !device.busy;
+  const canReadSettings = connected && profileProbe !== null && !device.busy;
+  const canWrite = connected && keymap !== null && confirmed && !device.busy;
 
-  const handleRead = () => {
+  const handleReadBindings = () => {
     if (!deviceBindings) return;
-    const next = {} as Record<ButtonId, Binding>;
+    const next = { ...profile.bindings };
+    let read = 0;
     for (const { button } of BUTTON_SLOTS) {
       const binding = deviceBindings[button];
-      if (!binding) return;
+      if (!binding) continue;
       next[button] = binding;
+      read += 1;
     }
     onApplyBindings(next);
     notify({
+      tone: read > 0 ? 'success' : 'error',
+      title: read > 0 ? '已从鼠标读取按键' : '未能识别设备按键',
+      detail:
+        read > 0
+          ? `${read} 个按键已读取${read < BUTTON_SLOTS.length ? '，其余保留当前配置' : ''}，设置会保存到本机浏览器。`
+          : '设备返回的按键代码不在已解析的协议表中。',
+    });
+  };
+
+  const handleReadSettings = () => {
+    if (!profileProbe) return;
+    onApplyDeviceSettings(profileProbe.settings);
+    notify({
       tone: 'success',
-      title: '已从鼠标读取按键',
-      detail: '当前配置的 6 个按键已更新，设置会保存到本机浏览器。',
+      title: '已读取 DPI 与性能设置',
+      detail: 'DPI 档位、档位颜色、回报率、LOD、去抖与传感器修正已同步到当前配置。',
     });
   };
 
   const handleWrite = async () => {
     if (!canWrite) return;
     try {
-      const result = await device.writeBindings(profile.bindings);
+      const sections = profileProbe
+        ? { bindings: true, dpi: true, performance: true }
+        : { bindings: true, dpi: false, performance: false };
+      const result = await device.writeProfile(profile, sections);
       setLastWrite(result);
       setConfirmed(false);
+      const skipped = result.keymap?.skipped.length ?? 0;
       notify({
         tone: result.verified === true ? 'success' : 'info',
-        title: result.verified === true ? '按键已写入并验证' : '按键写入流程结束',
+        title:
+          result.verified === true
+            ? profileProbe
+              ? '按键、DPI 与性能已写入并验证'
+              : '按键已写入并验证'
+            : '写入流程结束',
         detail:
           result.verified === true
-            ? '设备回读值与目标一致。'
+            ? skipped > 0
+              ? `设备回读一致；${skipped} 个宏或未映射按键保留了设备原功能。`
+              : profileProbe
+                ? '设备回读值与目标一致。'
+                : '设备回读值与目标一致；本次未写入 DPI 与性能配置块。'
             : result.verified === false
               ? '写入命令完成，但回读值与目标不一致，请重新连接后核对。'
               : '写入命令已完成，但未能回读验证。',
@@ -191,6 +214,7 @@ export function DeviceModal({
         device.probe.enter,
         ...device.probe.header.traces,
         ...(device.probe.keymap?.traces ?? []),
+        ...(device.probe.profile?.traces ?? []),
         ...(device.probe.commit ? [device.probe.commit] : []),
       ].some((trace) => !trace.checksumValid),
   );
@@ -200,7 +224,7 @@ export function DeviceModal({
       open={open}
       onClose={onClose}
       title="设备连接"
-      description="通过 WebHID 读取和写入 HECATE G3M PRO 的按键映射。"
+      description="通过 WebHID 读取和写入 HECATE G3M PRO 的按键、DPI、回报率与传感器设置。"
       size="wide"
     >
       <div className="device-panel">
@@ -367,6 +391,16 @@ export function DeviceModal({
               >
                 按键表 0x07 · {device.probe.keymap ? `${device.probe.keymap.raw.length} B` : '未读取'}
               </span>
+              <span
+                className={`device-chip ${
+                  device.probe.profile
+                    ? traceTone(device.probe.profile.traces.at(-1))
+                    : 'is-muted'
+                }`}
+              >
+                配置块 0x05 ·{' '}
+                {device.probe.profile ? `${device.probe.profile.raw.length} B` : '未读取'}
+              </span>
               <span className={`device-chip ${traceTone(device.probe.commit)}`}>
                 提交 0x02 · {device.probe.commit ? byteHex(device.probe.commit.status) : '未确认'}
               </span>
@@ -387,7 +421,7 @@ export function DeviceModal({
             )}
 
             <details className="device-raw">
-              <summary>查看设备头与按键表原始数据</summary>
+              <summary>查看设备头、按键表与配置块原始数据</summary>
               <div className="device-raw-block">
                 <span>HEADER · {device.probe.header.raw.length} BYTES</span>
                 <code>{formatHex(device.probe.header.raw)}</code>
@@ -398,8 +432,68 @@ export function DeviceModal({
                   <code>{formatHex(device.probe.keymap.raw)}</code>
                 </div>
               )}
+              {device.probe.profile && (
+                <div className="device-raw-block">
+                  <span>
+                    PROFILE #{device.probe.profile.index + 1} ·{' '}
+                    {device.probe.profile.raw.length} BYTES
+                  </span>
+                  <code>{formatHex(device.probe.profile.raw)}</code>
+                </div>
+              )}
             </details>
           </div>
+        )}
+
+        {connected && settings && (
+          <>
+            <div className="device-info-grid">
+              <div className="device-info-item">
+                <span>配置文件</span>
+                <strong>
+                  #{profileProbe!.index + 1} ·{' '}
+                  {settings.dpi.stages.filter((stage) => stage.enabled).length} / 7 档启用
+                </strong>
+              </div>
+              <div className="device-info-item">
+                <span>当前 DPI</span>
+                <strong>
+                  档位 {settings.dpi.activeStage + 1} ·{' '}
+                  {settings.dpi.stages[settings.dpi.activeStage]?.dpiX.toLocaleString('en-US')} DPI
+                </strong>
+              </div>
+              <div className="device-info-item">
+                <span>回报率</span>
+                <strong>{settings.pollingRate.toLocaleString('en-US')} Hz</strong>
+              </div>
+              <div className="device-info-item">
+                <span>LOD / 去抖</span>
+                <strong>
+                  {settings.sensorHeight} mm · {settings.buttonDelay} ms
+                </strong>
+              </div>
+              <div className="device-info-item">
+                <span>传感器修正</span>
+                <strong>
+                  {settings.lineCorrection || settings.rippleCorrection
+                    ? [settings.lineCorrection && '直线', settings.rippleCorrection && '波纹']
+                        .filter(Boolean)
+                        .join(' + ')
+                    : '原始输入'}
+                </strong>
+              </div>
+            </div>
+            <div className="device-actions">
+              <button
+                type="button"
+                className="ghost-button small"
+                disabled={!canReadSettings}
+                onClick={handleReadSettings}
+              >
+                读取 DPI / 性能到当前配置
+              </button>
+            </div>
+          </>
         )}
 
         {connected && keymap && (
@@ -417,8 +511,8 @@ export function DeviceModal({
               <button
                 type="button"
                 className="ghost-button small"
-                disabled={!canRead || device.busy}
-                onClick={handleRead}
+                disabled={!canReadBindings || device.busy}
+                onClick={handleReadBindings}
               >
                 从设备读取到当前配置
               </button>
@@ -458,7 +552,9 @@ export function DeviceModal({
                       </td>
                       <td>
                         {row.desiredCode === null ? (
-                          <span className="device-row-note">不支持写入</span>
+                          <span className="device-row-note">
+                            {row.binding.kind === 'macro' ? '宏 · 保留原功能' : '保留原功能'}
+                          </span>
                         ) : row.currentCode === row.desiredCode ? (
                           <span className="device-row-muted">不变</span>
                         ) : (
@@ -475,9 +571,12 @@ export function DeviceModal({
               <div className="device-write-head">
                 <ShieldCheck size={17} />
                 <div>
-                  <strong>写入 6 个按键映射</strong>
+                  <strong>{profileProbe ? '写入按键、DPI 与性能设置' : '写入 6 个按键映射'}</strong>
                   <p>
-                    写入槽位 0–4，其余 {Math.max(0, keyCount - 5)} 个设备按键槽位保持读取到的原值。
+                    写入槽位 0–5，其余 {Math.max(0, keyCount - 6)} 个设备按键槽位保持读取到的原值。
+                    {profileProbe
+                      ? ' 同时写入 84 字节板载配置块：DPI 档位与颜色、回报率、LOD、去抖与传感器修正。'
+                      : ' 本次未读取到配置块，只写入按键映射。'}
                     写入后会重新读取设备进行回读验证。
                   </p>
                 </div>
@@ -487,7 +586,7 @@ export function DeviceModal({
                 <div className="inline-note is-warning">
                   <AlertTriangle size={15} />
                   <div>
-                    以下按键尚未映射到官方协议代码，写入会整体取消：
+                    以下按键使用宏或没有官方协议代码，写入时会保留设备上的原功能：
                     {unsupported.map((row) => ` ${BUTTON_META[row.button].label}`).join('、')}。
                   </div>
                 </div>
@@ -497,11 +596,11 @@ export function DeviceModal({
                 <input
                   type="checkbox"
                   checked={confirmed}
-                  disabled={device.busy || unsupported.length > 0}
+                  disabled={device.busy}
                   onChange={(event) => setConfirmed(event.target.checked)}
                 />
                 <span>
-                  我确认要把当前配置中的 6 个按键映射写入鼠标板载配置。写入过程中请勿拔下鼠标。
+                  我确认要把当前配置写入鼠标板载配置。写入过程中请勿拔下鼠标。
                 </span>
               </label>
 
@@ -512,7 +611,11 @@ export function DeviceModal({
                 onClick={() => void handleWrite()}
               >
                 {device.busy ? <RefreshCw size={15} className="is-spinning" /> : <Zap size={15} />}
-                {device.busy ? '正在与设备通信…' : '写入按键映射'}
+                {device.busy
+                  ? '正在与设备通信…'
+                  : profileProbe
+                    ? '写入按键、DPI 与性能'
+                    : '写入按键映射'}
               </button>
             </div>
 
@@ -525,16 +628,35 @@ export function DeviceModal({
                 {lastWrite.verified === true ? <CheckCircle2 size={15} /> : <Info size={15} />}
                 <div>
                   <div>
-                    已发送 {lastWrite.traces.length} 个数据块并提交（0x02 状态{' '}
+                    已发送 {lastWrite.traces.length} 个数据包并提交（0x02 状态{' '}
                     {byteHex(lastWrite.commit.status)}）。
+                    {lastWrite.polling
+                      ? ` 回报率已即时应用为 ${lastWrite.polling.rate} Hz。`
+                      : ''}
                   </div>
-                  <div>
-                    变更槽位：
-                    {lastWrite.changedSlots.length > 0
-                      ? lastWrite.changedSlots.join(', ')
-                      : '无（与设备现有值一致）'}
-                    。
-                  </div>
+                  {lastWrite.keymap && (
+                    <div>
+                      按键：
+                      {lastWrite.keymap.changedSlots.length > 0
+                        ? `变更槽位 ${lastWrite.keymap.changedSlots.join(', ')}`
+                        : '无变化（与设备现有值一致）'}
+                      。
+                      {lastWrite.keymap.skipped.length > 0 &&
+                        ` 保留设备原功能：${lastWrite.keymap.skipped
+                          .map((item) => item.label)
+                          .join('、')}。`}
+                    </div>
+                  )}
+                  {lastWrite.block && (
+                    <div>
+                      配置块 #{lastWrite.block.index + 1}：
+                      {lastWrite.block.changedOffsets.length > 0
+                        ? `已更新 ${lastWrite.block.changedOffsets.length} 个字节`
+                        : '无变化（与设备现有值一致）'}
+                      。
+                    </div>
+                  )}
+                  {lastWrite.warnings.length > 0 && <div>{lastWrite.warnings.join('；')}。</div>}
                   <div>
                     回读验证：
                     {lastWrite.verified === true
@@ -543,7 +665,7 @@ export function DeviceModal({
                         ? '不一致，请重新连接后核对，避免重复写入'
                         : lastWrite.verificationError
                           ? `失败（${lastWrite.verificationError}）`
-                          : '设备未返回按键表'}
+                          : '设备未返回可验证的数据'}
                     。
                   </div>
                 </div>
@@ -577,7 +699,8 @@ export function DeviceModal({
 
         <div className="inline-note">
           <Info size={15} />
-          协议来自对官方驱动的静态分析。目前只实现按键表读写；DPI、性能校准、灯效与宏仍只保存在浏览器中，不会写入硬件。
+          协议来自对官方驱动的静态分析。可写入：6 个按键、DPI 档位与颜色、当前档位、回报率、LOD、去抖与直线/波纹修正。
+          宏、灯效亮度与模式、Windows 指针/滚轮/双击速度仍只保存在浏览器或系统中，不会写入硬件。
         </div>
       </div>
     </Modal>

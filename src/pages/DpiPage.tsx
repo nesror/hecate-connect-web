@@ -7,6 +7,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { type CSSProperties, useId, useState } from 'react';
+import { DeviceWriteButton } from '../components/DeviceWriteButton';
 import { PageHeader } from '../components/PageHeader';
 import { Modal, Range, Toggle } from '../components/ui';
 import {
@@ -16,13 +17,17 @@ import {
   MAX_DPI,
   MIN_DPI,
 } from '../defaults';
-import type { DpiSettings, DpiStage, Profile } from '../types';
+import type { HecateController } from '../hid/useHecateDevice';
+import type { DpiSettings, DpiStage, Profile, ToastMessage } from '../types';
 import { clamp, cx, hexToRgba } from '../utils';
 
 interface DpiPageProps {
   profile: Profile;
   onChange: (dpi: DpiSettings) => void;
   onNavigateLighting: () => void;
+  device: HecateController;
+  notify: (toast: Omit<ToastMessage, 'id'>) => void;
+  onOpenDevice: () => void;
 }
 
 function snapDpi(value: number): number {
@@ -282,7 +287,14 @@ function DpiChart({
   );
 }
 
-export function DpiPage({ profile, onChange, onNavigateLighting }: DpiPageProps) {
+export function DpiPage({
+  profile,
+  onChange,
+  onNavigateLighting,
+  device,
+  notify,
+  onOpenDevice,
+}: DpiPageProps) {
   const dpi = profile.dpi;
   const [selectedStage, setSelectedStage] = useState(dpi.activeStage);
   const [resetOpen, setResetOpen] = useState(false);
@@ -351,12 +363,23 @@ export function DpiPage({ profile, onChange, onNavigateLighting }: DpiPageProps)
       <PageHeader
         kicker="SENSITIVITY · PAW3395"
         title="DPI 设置"
-        description="配置 7 个 DPI 档位、X/Y 灵敏度与指示灯颜色。滚轮后方的 DPI 按键会在这些档位之间循环。"
+        description="配置 7 个 DPI 档位、X/Y 灵敏度与档位颜色。滚轮后方的 DPI 按键会在这些档位之间循环，连接鼠标后可将档位与颜色写入板载配置。"
         actions={
-          <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
-            <RotateCcw size={16} />
-            恢复默认
-          </button>
+          <>
+            <DeviceWriteButton
+              device={device}
+              profile={profile}
+              sections={{ bindings: false, dpi: true, performance: false }}
+              title="DPI 与档位颜色"
+              description="将 7 个 DPI 档位、X/Y 灵敏度、当前档位与档位颜色写入鼠标板载配置。指示灯亮度与呼吸模式仍只保存在浏览器。"
+              onOpenDevice={onOpenDevice}
+              notify={notify}
+            />
+            <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
+              <RotateCcw size={16} />
+              恢复默认
+            </button>
+          </>
         }
       />
 
@@ -598,7 +621,7 @@ export function DpiPage({ profile, onChange, onNavigateLighting }: DpiPageProps)
               ? `${dpi.indicator.effect === 'breath' ? '呼吸' : '常亮'} · 亮度 ${dpi.indicator.brightness}%`
               : '指示灯已关闭'}
           </strong>
-          <span>每档 DPI 使用对应颜色，在灯效页面调整模式与亮度</span>
+          <span>每档 DPI 使用对应颜色；档位颜色可写入鼠标，亮度与模式仅保存在本机</span>
         </span>
         <span className="indicator-summary-action">
           调节灯效

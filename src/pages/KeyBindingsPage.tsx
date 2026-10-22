@@ -18,6 +18,7 @@ import { MouseIllustration } from '../components/MouseIllustration';
 import { PageHeader } from '../components/PageHeader';
 import { KeyCap, Modal } from '../components/ui';
 import {
+  bindingFromKeyCode,
   bindingKey,
   bindingKindLabel,
   bindingLabel,
@@ -96,8 +97,14 @@ export function KeyBindingsPage({
         setCaptureOpen(false);
         return;
       }
-      applyBinding(buildBinding('keyboard', event.code, profile.macros));
-      setCategory('keyboard');
+      const binding = bindingFromKeyCode(event.code);
+      if (!binding) {
+        setNotice(`「${event.code}」没有对应的官方协议代码，未更改当前按键。请从列表中手动选择。`);
+        setCaptureOpen(false);
+        return;
+      }
+      applyBinding(binding);
+      setCategory(categoryForBinding(binding));
       setCaptureOpen(false);
     };
     window.addEventListener('keydown', handler, true);
@@ -362,7 +369,10 @@ export function KeyBindingsPage({
             <Lock size={14} />
             <span>
               6 个按键均可改键，仅左键不能设为禁用。
-              <span className="muted"> 更改会即时保存到当前配置文件。</span>
+              <span className="muted">
+                {' '}
+                键盘、多媒体与系统功能会在连接鼠标后写入板载配置；宏目前仅保存在浏览器。
+              </span>
             </span>
           </div>
         </section>

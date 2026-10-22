@@ -1,8 +1,4 @@
-import {
-  bindingFromVendorCode,
-  bindingKey,
-  VENDOR_ASSIGNMENTS,
-} from '../functions';
+import { bindingFromVendorCode, vendorCodeForBinding } from '../functions';
 import type { Binding, ButtonId } from '../types';
 
 export const REPORT_ID = 4;
@@ -12,14 +8,19 @@ export const HEADER_LENGTH = 34;
 export const MAX_KEYS = 170;
 export const DISABLED_ASSIGNMENT = 0xa00000;
 export const COMMAND_TIMEOUT_MS = 2000;
+export const PROFILE_BLOCK_LENGTH = 84;
 
 export const COMMAND = {
   handshake: 0xaa,
   enterConfig: 0x01,
   commit: 0x02,
   readHeader: 0x03,
+  readBlock: 0x05,
+  writeBlock: 0x06,
   readKeymap: 0x07,
   writeKeymap: 0x09,
+  dpiEnable: 0x28,
+  pollingRate: 0x29,
 } as const;
 
 export const HANDSHAKE_READY = 0xff;
@@ -49,6 +50,9 @@ export interface DeviceHeader {
   keyCount: number;
   macroBlocks: number;
   macroBytes: number;
+  dpiStep: number;
+  dpiMaxIndex: number;
+  dpiBase: number;
 }
 
 function checksum(packet: Uint8Array): number {
@@ -113,7 +117,17 @@ export function isErrorStatus(status: number): boolean {
 export function parseHeader(raw: Uint8Array): DeviceHeader {
   const keyCount = raw[5] ?? 0;
   const macroBlocks = raw[6] ?? 0;
-  return { keyCount, macroBlocks, macroBytes: macroBlocks * 128 };
+  const step = raw[11] ?? 0;
+  const maxIndex = (raw[12] ?? 0) | ((raw[13] ?? 0) << 8);
+  const base = (raw[14] ?? 0) | ((raw[15] ?? 0) << 8);
+  return {
+    keyCount,
+    macroBlocks,
+    macroBytes: macroBlocks * 128,
+    dpiStep: step > 0 ? step : 50,
+    dpiMaxIndex: maxIndex > 0 ? maxIndex : 519,
+    dpiBase: base > 0 ? base : 50,
+  };
 }
 
 export function assignmentAt(keymap: Uint8Array, slot: number): number | null {
@@ -137,7 +151,7 @@ export function setAssignment(keymap: Uint8Array, slot: number, code: number): v
 
 export function assignmentForBinding(binding: Binding): number | null {
   if (binding.kind === 'disabled') return DISABLED_ASSIGNMENT;
-  return VENDOR_ASSIGNMENTS[bindingKey(binding)] ?? null;
+  return vendorCodeForBinding(binding);
 }
 
 export function bindingForAssignment(code: number): Binding | null {
@@ -175,10 +189,18 @@ export function commandLabel(command: number): string {
       return '提交并退出';
     case COMMAND.readHeader:
       return '读取设备头';
+    case COMMAND.readBlock:
+      return '读取配置块';
+    case COMMAND.writeBlock:
+      return '写入配置块';
     case COMMAND.readKeymap:
       return '读取按键表';
     case COMMAND.writeKeymap:
       return '写入按键表';
+    case COMMAND.dpiEnable:
+      return '应用 DPI 设置';
+    case COMMAND.pollingRate:
+      return '应用回报率';
     default:
       return `命令 0x${command.toString(16).toUpperCase()}`;
   }

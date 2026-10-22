@@ -245,12 +245,12 @@ export function Sidebar({
           <div className="local-note">
             <ShieldCheck size={15} />
             <span>
-              配置仅保存在本机浏览器
-              <small>连接后可读写按键表，写入前需手动确认</small>
+              配置默认保存在本机浏览器
+              <small>连接后可写入按键、DPI 与性能，写入前需确认</small>
             </span>
           </div>
           <div className="sidebar-version">
-            <span>WEB CONFIG v1.3</span>
+            <span>WEB CONFIG v1.4</span>
             <span>非官方</span>
           </div>
         </div>

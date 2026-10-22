@@ -7,21 +7,25 @@ import {
   MousePointer2,
   MoveVertical,
   RotateCcw,
-  SlidersHorizontal,
   Sparkles,
   Timer,
 } from 'lucide-react';
 import { useState } from 'react';
+import { DeviceWriteButton } from '../components/DeviceWriteButton';
 import { PageHeader } from '../components/PageHeader';
 import { Modal, Range, Segmented, Toggle } from '../components/ui';
 import { BUTTON_DELAY_OPTIONS, createDefaultPerformance, MODEL_INFO } from '../defaults';
 import { POLLING_OPTIONS } from '../functions';
-import type { PerformanceSettings, PollingRate, Profile } from '../types';
+import type { HecateController } from '../hid/useHecateDevice';
+import type { PerformanceSettings, PollingRate, Profile, ToastMessage } from '../types';
 import { cx } from '../utils';
 
 interface PerformancePageProps {
   profile: Profile;
   onChange: (performance: PerformanceSettings) => void;
+  device: HecateController;
+  notify: (toast: Omit<ToastMessage, 'id'>) => void;
+  onOpenDevice: () => void;
 }
 
 const SCROLL_OPTIONS = [
@@ -30,7 +34,13 @@ const SCROLL_OPTIONS = [
   { value: 3, label: '3 行', caption: '快速' },
 ];
 
-export function PerformancePage({ profile, onChange }: PerformancePageProps) {
+export function PerformancePage({
+  profile,
+  onChange,
+  device,
+  notify,
+  onOpenDevice,
+}: PerformancePageProps) {
   const performance = profile.performance;
   const [resetOpen, setResetOpen] = useState(false);
 
@@ -40,23 +50,32 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
 
   const polling =
     POLLING_OPTIONS.find((option) => option.value === performance.pollingRate) ?? POLLING_OPTIONS[3];
-  const corrections = [
-    performance.lineCorrection,
-    performance.rippleCorrection,
-    performance.angleSnap,
-  ].filter(Boolean).length;
+  const corrections = [performance.lineCorrection, performance.rippleCorrection].filter(
+    Boolean,
+  ).length;
 
   return (
     <div className="page performance-page">
       <PageHeader
         kicker="SENSOR · POLLING · RESPONSE"
         title="性能与校准"
-        description="调整回报率、传感器修正与 Windows 指针行为。本页参数仅保存在本机配置，暂不会写入鼠标硬件。"
+        description="回报率、去抖、LOD 与直线/波纹修正可直接写入鼠标；Windows 指针、滚轮与双击速度属于系统设置，仅保存在本机配置。"
         actions={
-          <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
-            <RotateCcw size={16} />
-            恢复默认
-          </button>
+          <>
+            <DeviceWriteButton
+              device={device}
+              profile={profile}
+              sections={{ bindings: false, dpi: false, performance: true }}
+              title="性能设置"
+              description="将回报率、去抖延时、静默高度与传感器修正写入鼠标板载配置，并即时应用回报率。"
+              onOpenDevice={onOpenDevice}
+              notify={notify}
+            />
+            <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
+              <RotateCcw size={16} />
+              恢复默认
+            </button>
+          </>
         }
       />
 
@@ -105,7 +124,7 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
             <span>运动修正</span>
             <strong>
               {corrections}
-              <small> / 3</small>
+              <small> / 2</small>
             </strong>
             <em>{corrections ? '已启用部分修正' : '原始输入，无修正'}</em>
           </div>
@@ -195,7 +214,7 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
               <small>抬升停止追踪的距离</small>
             </div>
             <div className="choice-cards">
-              {([1, 2] as const).map((height) => (
+              {([1, 2, 3] as const).map((height) => (
                 <button
                   key={height}
                   type="button"
@@ -208,7 +227,13 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
                   </span>
                   <span>
                     <strong>{height} mm</strong>
-                    <small>{height === 1 ? '低抬升，快速复位' : '高容错，适合大幅甩枪'}</small>
+                    <small>
+                      {height === 1
+                        ? '低抬升，快速复位'
+                        : height === 2
+                          ? '平衡容错与小幅度复位'
+                          : '高容错，适合大幅甩枪'}
+                    </small>
                   </span>
                   {performance.sensorHeight === height && <Check size={15} />}
                 </button>
@@ -218,7 +243,7 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
 
           <div className="response-note">
             <Sparkles size={15} />
-            <span>PAW3395 支持 1 mm 静默高度，配合无线底座可获得更一致的手感。</span>
+            <span>PAW3395 支持 1–3 mm 静默高度；连接鼠标后，LOD 会与去抖设置一起写入板载配置。</span>
           </div>
         </section>
       </div>
@@ -262,24 +287,10 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
                 label="波纹修正"
               />
             </div>
-            <div className="calibration-row">
-              <span className="calibration-icon">
-                <SlidersHorizontal size={17} />
-              </span>
-              <div className="calibration-copy">
-                <strong>角度捕捉</strong>
-                <span>将移动吸附到 45° 倍数方向，适合需要精准斜向移动的场景。</span>
-              </div>
-              <Toggle
-                checked={performance.angleSnap}
-                onChange={(next) => update({ angleSnap: next })}
-                label="角度捕捉"
-              />
-            </div>
           </div>
 
           <div className="inline-note">
-            保持三项关闭可以获得最原始的传感器输入，也是竞技游戏的常见设置。
+            保持两项关闭可以获得最原始的传感器输入。官方驱动的配置写入中角度捕捉始终为关闭，固件不提供该开关。
           </div>
         </section>
 
@@ -289,7 +300,12 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
               <span className="section-kicker">WINDOWS POINTER</span>
               <h2>指针与滚轮</h2>
             </div>
-            <span className="panel-note">系统级设置</span>
+            <span className="panel-note">Windows 系统设置</span>
+          </div>
+
+          <div className="inline-note">
+            <Info size={14} />
+            指针速度、滚轮行数与双击速度由 Windows 控制，网页无法写入鼠标固件，也不会自动修改系统设置；这些值仅随配置保存。
           </div>
 
           <div className="slider-setting">
@@ -383,17 +399,22 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
 
       <section className="panel runtime-panel">
         <div className="runtime-copy">
-          <span className="section-kicker">LOCAL CONFIGURATION</span>
-          <h2>本地配置模式</h2>
+          <span className="section-kicker">ONBOARD MEMORY</span>
+          <h2>硬件写入范围</h2>
           <p>
-            按键映射已可通过 WebHID 读写，但性能与校准参数尚未实现硬件写入。这里的设置会保存到本机配置，
-            也可以导出 JSON 留档，暂不会实时改变鼠标行为。
+            连接鼠标后，可把回报率、去抖、LOD 与直线/波纹修正写入板载配置，并即时应用回报率；
+            写入完成后会自动回读核对。Windows 指针、滚轮与双击速度仍由系统管理。
           </p>
         </div>
         <div className="runtime-list">
           <div className="runtime-item is-ok">
             <Check size={15} />
-            <span>配置编辑</span>
+            <span>回报率写入</span>
+            <strong>可用</strong>
+          </div>
+          <div className="runtime-item is-ok">
+            <Check size={15} />
+            <span>LOD / 去抖 / 传感器修正</span>
             <strong>可用</strong>
           </div>
           <div className="runtime-item is-ok">
@@ -403,8 +424,8 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
           </div>
           <div className="runtime-item">
             <Info size={15} />
-            <span>性能参数写入</span>
-            <strong>暂不支持</strong>
+            <span>Windows 指针与滚轮</span>
+            <strong>系统设置</strong>
           </div>
           <div className="runtime-item">
             <Info size={15} />

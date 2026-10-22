@@ -1,5 +1,5 @@
 import { BUTTON_META } from '../functions';
-import type { Binding, ButtonId } from '../types';
+import type { Binding, ButtonId, Profile } from '../types';
 import {
   assignmentAt,
   assignmentForBinding,
@@ -15,12 +15,21 @@ import {
   MAX_KEYS,
   parseHeader,
   parseResponse,
+  PROFILE_BLOCK_LENGTH,
   REPORT_DATA_LENGTH,
   REPORT_ID,
   setAssignment,
   type DeviceHeader,
   type HidResponse,
 } from './protocol';
+import {
+  applyDpiToBlock,
+  applyPerformanceToBlock,
+  changedOffsets,
+  decodeProfileBlock,
+  pollingIndex,
+  type DeviceSettings,
+} from './profileCodec';
 
 export interface HidCollectionSummary {
   usagePage: number;
@@ -64,9 +73,43 @@ export interface ProbeResult {
     raw: Uint8Array;
     traces: CommandTrace[];
   } | null;
+  profile: {
+    index: number;
+    raw: Uint8Array;
+    settings: DeviceSettings;
+    traces: CommandTrace[];
+  } | null;
   commit: CommandTrace | null;
   warnings: string[];
   probedAt: string;
+}
+
+export interface SkippedSlot {
+  button: ButtonId;
+  slot: number;
+  label: string;
+  reason: string;
+}
+
+export interface KeymapWriteResult {
+  before: Uint8Array;
+  after: Uint8Array;
+  changedSlots: number[];
+  skipped: SkippedSlot[];
+}
+
+export interface ProfileBlockWriteResult {
+  index: number;
+  offset: number;
+  before: Uint8Array;
+  after: Uint8Array;
+  changedOffsets: number[];
+}
+
+export interface WriteSections {
+  bindings: boolean;
+  dpi: boolean;
+  performance: boolean;
 }
 
 export interface WriteResult {
@@ -74,14 +117,15 @@ export interface WriteResult {
     raw: Uint8Array;
     parsed: DeviceHeader;
   };
-  before: Uint8Array;
-  after: Uint8Array;
-  changedSlots: number[];
+  keymap: KeymapWriteResult | null;
+  block: ProfileBlockWriteResult | null;
+  polling: { index: number; rate: number } | null;
   traces: CommandTrace[];
   commit: CommandTrace;
   verification: ProbeResult | null;
   verificationError: string | null;
   verified: boolean | null;
+  warnings: string[];
 }
 
 interface PendingResponse {
@@ -220,8 +264,11 @@ export class HecateHid {
     return this.run(() => this.probeUnlocked());
   }
 
-  writeBindings(bindings: Record<ButtonId, Binding>): Promise<WriteResult> {
-    return this.run(() => this.writeBindingsUnlocked(bindings));
+  writeProfile(
+    profile: Profile,
+    sections: WriteSections = { bindings: true, dpi: true, performance: true },
+  ): Promise<WriteResult> {
+    return this.run(() => this.writeProfileUnlocked(profile, sections));
   }
 
   private run<T>(task: () => Promise<T>): Promise<T> {
@@ -308,15 +355,17 @@ export class HecateHid {
     return response;
   }
 
-  private async readChunks(
+  private async readChunksAt(
     command: number,
+    baseOffset: number,
     total: number,
   ): Promise<{ data: Uint8Array; traces: CommandTrace[] }> {
     const data = new Uint8Array(total);
     const traces: CommandTrace[] = [];
 
-    for (let offset = 0; offset < total; offset += CHUNK_SIZE) {
-      const length = Math.min(CHUNK_SIZE, total - offset);
+    for (let relative = 0; relative < total; relative += CHUNK_SIZE) {
+      const length = Math.min(CHUNK_SIZE, total - relative);
+      const offset = baseOffset + relative;
       const request = new Uint8Array(length);
       let response: HidResponse;
       try {
@@ -332,20 +381,32 @@ export class HecateHid {
           `${commandLabel(command)}返回的数据不足：需要 ${length} 字节，收到 ${response.payload.length} 字节`,
         );
       }
-      data.set(response.payload.slice(0, length), offset);
+      data.set(response.payload.slice(0, length), relative);
     }
 
     return { data, traces };
   }
 
-  private async writeChunks(command: number, data: Uint8Array): Promise<CommandTrace[]> {
+  private readChunks(command: number, total: number): Promise<{ data: Uint8Array; traces: CommandTrace[] }> {
+    return this.readChunksAt(command, 0, total);
+  }
+
+  private async writeChunksAt(
+    command: number,
+    baseOffset: number,
+    data: Uint8Array,
+  ): Promise<CommandTrace[]> {
     const traces: CommandTrace[] = [];
-    for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
-      const chunk = data.slice(offset, offset + CHUNK_SIZE);
-      const response = await this.commandOk(command, offset, chunk);
+    for (let relative = 0; relative < data.length; relative += CHUNK_SIZE) {
+      const chunk = data.slice(relative, relative + CHUNK_SIZE);
+      const response = await this.commandOk(command, baseOffset + relative, chunk);
       traces.push(trace(response));
     }
     return traces;
+  }
+
+  private writeChunks(command: number, data: Uint8Array): Promise<CommandTrace[]> {
+    return this.writeChunksAt(command, 0, data);
   }
 
   private async handshake(): Promise<CommandTrace> {
@@ -387,6 +448,7 @@ export class HecateHid {
 
     let headerRead: { data: Uint8Array; traces: CommandTrace[] };
     let keymapRead: { data: Uint8Array; traces: CommandTrace[] } | null = null;
+    let profileRead: ProbeResult['profile'] = null;
     let header: DeviceHeader;
 
     try {
@@ -403,6 +465,28 @@ export class HecateHid {
         );
       }
       keymapRead = await this.readChunks(COMMAND.readKeymap, header.keyCount * 3);
+
+      try {
+        const indexRead = await this.readChunksAt(COMMAND.readBlock, 0, 1);
+        const index = indexRead.data[0] ?? 0;
+        if (index > 15) {
+          warnings.push(`设备返回的配置文件序号异常（${index}），未读取 DPI 与性能设置。`);
+        } else {
+          const blockRead = await this.readChunksAt(
+            COMMAND.readBlock,
+            index * PROFILE_BLOCK_LENGTH,
+            PROFILE_BLOCK_LENGTH,
+          );
+          profileRead = {
+            index,
+            raw: blockRead.data,
+            settings: decodeProfileBlock(blockRead.data, header),
+            traces: [...indexRead.traces, ...blockRead.traces],
+          };
+        }
+      } catch (error) {
+        warnings.push(`读取 DPI 与性能配置块失败：${errorMessage(error)}`);
+      }
     } catch (error) {
       try {
         await this.commit();
@@ -434,32 +518,37 @@ export class HecateHid {
             traces: keymapRead.traces,
           }
         : null,
+      profile: profileRead,
       commit,
       warnings,
       probedAt: new Date().toISOString(),
     };
   }
 
-  private async writeBindingsUnlocked(bindings: Record<ButtonId, Binding>): Promise<WriteResult> {
-    const planned = BUTTON_SLOTS.map(({ button, slot }) => ({
-      button,
-      slot,
-      code: assignmentForBinding(bindings[button]),
-    }));
-    const unsupported = planned.filter((item) => item.code === null);
-    if (unsupported.length > 0) {
-      throw new Error(
-        `以下按键尚未映射到官方协议代码，未写入任何数据：${unsupported
-          .map((item) => BUTTON_META[item.button].label)
-          .join('、')}`,
-      );
+  private async writeProfileUnlocked(profile: Profile, sections: WriteSections): Promise<WriteResult> {
+    if (!sections.bindings && !sections.dpi && !sections.performance) {
+      throw new Error('没有选择要写入的设置。');
     }
+
+    const planned = sections.bindings
+      ? BUTTON_SLOTS.map(({ button, slot }) => ({
+          button,
+          slot,
+          label: BUTTON_META[button].label,
+          code: assignmentForBinding(profile.bindings[button]),
+        }))
+      : [];
+    const writable = planned.filter(
+      (item): item is typeof item & { code: number } => item.code !== null,
+    );
 
     await this.handshake();
     await this.enterConfig();
 
     let headerRead: { data: Uint8Array; traces: CommandTrace[] };
-    let keymapRead: { data: Uint8Array; traces: CommandTrace[] };
+    let keymapRead: { data: Uint8Array; traces: CommandTrace[] } | null = null;
+    let blockRead: { data: Uint8Array; traces: CommandTrace[] } | null = null;
+    let profileIndex = 0;
     let header: DeviceHeader;
 
     try {
@@ -468,7 +557,21 @@ export class HecateHid {
       if (header.keyCount < 5 || header.keyCount > MAX_KEYS) {
         throw new Error(`设备按键数量异常（${header.keyCount}），已取消写入。`);
       }
-      keymapRead = await this.readChunks(COMMAND.readKeymap, header.keyCount * 3);
+      if (sections.bindings) {
+        keymapRead = await this.readChunks(COMMAND.readKeymap, header.keyCount * 3);
+      }
+      if (sections.dpi || sections.performance) {
+        const indexRead = await this.readChunksAt(COMMAND.readBlock, 0, 1);
+        profileIndex = indexRead.data[0] ?? 0;
+        if (profileIndex > 15) {
+          throw new Error(`设备返回的配置文件序号异常（${profileIndex}），已取消写入。`);
+        }
+        blockRead = await this.readChunksAt(
+          COMMAND.readBlock,
+          profileIndex * PROFILE_BLOCK_LENGTH,
+          PROFILE_BLOCK_LENGTH,
+        );
+      }
     } catch (error) {
       try {
         await this.commit();
@@ -478,21 +581,90 @@ export class HecateHid {
       throw error;
     }
 
-    const before = keymapRead.data.slice();
-    const after = before.slice();
-    for (const item of planned) setAssignment(after, item.slot, item.code as number);
+    let keymap: KeymapWriteResult | null = null;
+    if (keymapRead) {
+      const before = keymapRead.data.slice();
+      const after = before.slice();
+      for (const item of writable) setAssignment(after, item.slot, item.code);
+      const skipped: SkippedSlot[] = planned
+        .filter((item) => item.code === null)
+        .map((item) => ({
+          button: item.button,
+          slot: item.slot,
+          label: item.label,
+          reason:
+            profile.bindings[item.button].kind === 'macro'
+              ? '宏尚未写入固件，设备保留该按键原有功能'
+              : '该功能没有可用的官方协议代码',
+        }));
+      keymap = {
+        before,
+        after,
+        changedSlots: writable
+          .filter((item) => assignmentAt(before, item.slot) !== item.code)
+          .map((item) => item.slot),
+        skipped,
+      };
+    }
 
-    const changedSlots = planned
-      .filter((item) => assignmentAt(before, item.slot) !== item.code)
-      .map((item) => item.slot);
+    let block: ProfileBlockWriteResult | null = null;
+    if (blockRead) {
+      const before = blockRead.data.slice();
+      const after = before.slice();
+      if (sections.dpi) applyDpiToBlock(after, profile.dpi, header);
+      if (sections.performance) applyPerformanceToBlock(after, profile.performance);
+      block = {
+        index: profileIndex,
+        offset: profileIndex * PROFILE_BLOCK_LENGTH,
+        before,
+        after,
+        changedOffsets: changedOffsets(before, after),
+      };
+    }
 
-    let traces: CommandTrace[];
-    try {
-      traces = await this.writeChunks(COMMAND.writeKeymap, after);
-    } catch (error) {
-      throw new Error(
-        `写入过程中断：${errorMessage(error)}。为避免提交不完整数据，已停止发送；请拔下并重新连接鼠标后重试。`,
-      );
+    const warnings: string[] = [];
+    const traces: CommandTrace[] = [];
+
+    if (keymap && keymap.changedSlots.length > 0) {
+      try {
+        traces.push(...(await this.writeChunks(COMMAND.writeKeymap, keymap.after)));
+      } catch (error) {
+        throw new Error(
+          `写入按键表过程中断：${errorMessage(
+            error,
+          )}。为避免提交不完整数据，已停止发送；请拔下并重新连接鼠标后重试。`,
+        );
+      }
+    }
+
+    if (block && block.changedOffsets.length > 0) {
+      try {
+        traces.push(...(await this.writeChunksAt(COMMAND.writeBlock, block.offset, block.after)));
+      } catch (error) {
+        throw new Error(
+          `写入 DPI / 性能配置块过程中断：${errorMessage(
+            error,
+          )}。数据尚未提交；请拔下并重新连接鼠标后重试。`,
+        );
+      }
+    }
+
+    let polling: WriteResult['polling'] = null;
+    if (sections.performance) {
+      const index = pollingIndex(profile.performance.pollingRate);
+      try {
+        const response = await this.commandOk(
+          COMMAND.pollingRate,
+          0,
+          new Uint8Array([Math.max(0, index)]),
+        );
+        traces.push(trace(response));
+        polling = { index, rate: profile.performance.pollingRate };
+      } catch (error) {
+        warnings.push(
+          `回报率即时应用失败：${errorMessage(error)}。配置块中已包含回报率设置，重新连接后仍然生效。`,
+        );
+      }
     }
 
     let commit: CommandTrace;
@@ -500,7 +672,7 @@ export class HecateHid {
       commit = await this.commit();
     } catch (error) {
       throw new Error(
-        `按键数据已发送，但提交命令失败：${errorMessage(
+        `设置已发送，但提交命令失败：${errorMessage(
           error,
         )}。请断开鼠标重新连接，并使用“重新读取”确认设备状态。`,
       );
@@ -517,10 +689,28 @@ export class HecateHid {
     }
 
     let verified: boolean | null = null;
-    if (verification?.keymap) {
-      verified = planned.every(
-        (item) => assignmentAt(verification!.keymap!.raw, item.slot) === item.code,
-      );
+    if (verification) {
+      const checks: boolean[] = [];
+      if (keymap) {
+        const raw = verification.keymap?.raw ?? null;
+        checks.push(
+          raw !== null &&
+            writable.every((item) => assignmentAt(raw, item.slot) === item.code),
+        );
+      }
+      if (block) {
+        const raw = verification.profile?.raw ?? null;
+        checks.push(
+          raw !== null &&
+            block.changedOffsets.every((offset) => raw[offset] === block.after[offset]),
+        );
+      }
+      if (sections.performance) {
+        checks.push(
+          verification.profile?.settings.pollingRate === profile.performance.pollingRate,
+        );
+      }
+      verified = checks.every(Boolean);
     }
 
     return {
@@ -528,14 +718,15 @@ export class HecateHid {
         raw: headerRead.data,
         parsed: header,
       },
-      before,
-      after,
-      changedSlots,
+      keymap,
+      block,
+      polling,
       traces,
       commit,
       verification,
       verificationError,
       verified,
+      warnings,
     };
   }
 }

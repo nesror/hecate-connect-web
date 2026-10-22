@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Binding, ButtonId } from '../types';
+import type { Profile } from '../types';
 import {
   HecateHid,
   type HidDescriptor,
   type ProbeResult,
   type WriteResult,
+  type WriteSections,
 } from './HecateHid';
 import { REPORT_ID } from './protocol';
 
@@ -29,7 +30,7 @@ export interface HecateController {
   connectGranted: () => Promise<void>;
   disconnect: () => Promise<void>;
   refresh: () => Promise<void>;
-  writeBindings: (bindings: Record<ButtonId, Binding>) => Promise<WriteResult>;
+  writeProfile: (profile: Profile, sections?: WriteSections) => Promise<WriteResult>;
 }
 
 function describeError(error: unknown): string {
@@ -168,14 +169,14 @@ export function useHecateDevice(): HecateController {
     }
   }, []);
 
-  const writeBindings = useCallback(async (bindings: Record<ButtonId, Binding>) => {
+  const writeProfile = useCallback(async (profile: Profile, sections?: WriteSections) => {
     const hid = hidRef.current;
     if (!hid) throw new Error('请先连接鼠标。');
 
     setBusy(true);
     setError(null);
     try {
-      const result = await hid.writeBindings(bindings);
+      const result = await hid.writeProfile(profile, sections);
       if (result.verification) setProbe(result.verification);
       setPhase('connected');
       return result;
@@ -235,6 +236,6 @@ export function useHecateDevice(): HecateController {
     connectGranted,
     disconnect,
     refresh,
-    writeBindings,
+    writeProfile,
   };
 }
