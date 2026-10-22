@@ -250,7 +250,7 @@ export function Sidebar({
             </span>
           </div>
           <div className="sidebar-version">
-            <span>WEB CONFIG v1.1</span>
+            <span>WEB CONFIG v1.2</span>
             <span>非官方</span>
           </div>
         </div>

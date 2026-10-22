@@ -14,6 +14,7 @@ export const DISABLED_ASSIGNMENT = 0xa00000;
 export const COMMAND_TIMEOUT_MS = 2000;
 
 export const COMMAND = {
+  handshake: 0xaa,
   enterConfig: 0x01,
   commit: 0x02,
   readHeader: 0x03,
@@ -21,10 +22,12 @@ export const COMMAND = {
   writeKeymap: 0x09,
 } as const;
 
+export const HANDSHAKE_READY = 0xff;
+
 export const BUTTON_SLOTS: ReadonlyArray<{ button: ButtonId; slot: number }> = [
   { button: 'left', slot: 0 },
-  { button: 'right', slot: 1 },
-  { button: 'wheel', slot: 2 },
+  { button: 'wheel', slot: 1 },
+  { button: 'right', slot: 2 },
   { button: 'forward', slot: 3 },
   { button: 'back', slot: 4 },
 ];
@@ -115,7 +118,7 @@ export function parseHeader(raw: Uint8Array): DeviceHeader {
 export function assignmentAt(keymap: Uint8Array, slot: number): number | null {
   const offset = slot * 3;
   if (offset < 0 || offset + 2 >= keymap.length) return null;
-  return keymap[offset] | (keymap[offset + 1] << 8) | (keymap[offset + 2] << 16);
+  return (keymap[offset] << 16) | (keymap[offset + 1] << 8) | keymap[offset + 2];
 }
 
 export function setAssignment(keymap: Uint8Array, slot: number, code: number): void {
@@ -126,9 +129,9 @@ export function setAssignment(keymap: Uint8Array, slot: number, code: number): v
   if (!Number.isInteger(code) || code < 0 || code > 0xffffff) {
     throw new Error(`按键代码 0x${code.toString(16)} 无法用 3 字节表示`);
   }
-  keymap[offset] = code & 0xff;
+  keymap[offset] = (code >>> 16) & 0xff;
   keymap[offset + 1] = (code >>> 8) & 0xff;
-  keymap[offset + 2] = (code >>> 16) & 0xff;
+  keymap[offset + 2] = code & 0xff;
 }
 
 export function assignmentForBinding(binding: Binding): number | null {
@@ -163,6 +166,8 @@ export function formatCode(code: number): string {
 
 export function commandLabel(command: number): string {
   switch (command) {
+    case COMMAND.handshake:
+      return '设备握手';
     case COMMAND.enterConfig:
       return '进入配置模式';
     case COMMAND.commit:

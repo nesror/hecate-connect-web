@@ -22,6 +22,7 @@ import {
   BUTTON_SLOTS,
   formatCode,
   formatHex,
+  HANDSHAKE_READY,
   isErrorStatus,
 } from '../hid/protocol';
 import type { Binding, ButtonId, Profile, ToastMessage } from '../types';
@@ -186,6 +187,7 @@ export function DeviceModal({
   const anyChecksumMismatch = Boolean(
     device.probe &&
       [
+        device.probe.handshake,
         device.probe.enter,
         ...device.probe.header.traces,
         ...(device.probe.keymap?.traces ?? []),
@@ -343,6 +345,13 @@ export function DeviceModal({
               <span>{new Date(device.probe.probedAt).toLocaleTimeString()}</span>
             </div>
             <div className="device-traces">
+              <span
+                className={`device-chip ${
+                  device.probe.handshake.status === HANDSHAKE_READY ? 'is-ok' : 'is-bad'
+                }`}
+              >
+                握手 0xAA · {byteHex(device.probe.handshake.status)}
+              </span>
               <span className={`device-chip ${traceTone(device.probe.enter)}`}>
                 进入配置 0x01 · {byteHex(device.probe.enter.status)}
               </span>

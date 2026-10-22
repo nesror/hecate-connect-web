@@ -9,6 +9,7 @@ import {
   COMMAND,
   COMMAND_TIMEOUT_MS,
   commandLabel,
+  HANDSHAKE_READY,
   HEADER_LENGTH,
   isErrorStatus,
   MAX_KEYS,
@@ -52,6 +53,7 @@ export interface CommandTrace {
 
 export interface ProbeResult {
   ok: boolean;
+  handshake: CommandTrace;
   enter: CommandTrace;
   header: {
     raw: Uint8Array;
@@ -315,12 +317,13 @@ export class HecateHid {
 
     for (let offset = 0; offset < total; offset += CHUNK_SIZE) {
       const length = Math.min(CHUNK_SIZE, total - offset);
+      const request = new Uint8Array(length);
       let response: HidResponse;
       try {
-        response = await this.commandOk(command, offset, EMPTY_CHUNK);
+        response = await this.commandOk(command, offset, request);
       } catch (error) {
         if (!(error instanceof HidTimeoutError)) throw error;
-        response = await this.commandOk(command, offset, EMPTY_CHUNK);
+        response = await this.commandOk(command, offset, request);
       }
 
       traces.push(trace(response));
@@ -345,6 +348,27 @@ export class HecateHid {
     return traces;
   }
 
+  private async handshake(): Promise<CommandTrace> {
+    let lastStatus: number | null = null;
+    for (let attempt = 0; attempt < 25; attempt += 1) {
+      try {
+        const response = await this.send(COMMAND.handshake, 0, EMPTY_CHUNK, 400);
+        lastStatus = response.status;
+        if (response.status === HANDSHAKE_READY) return trace(response);
+      } catch (error) {
+        if (!(error instanceof HidTimeoutError)) throw error;
+      }
+      await delay(50);
+    }
+    const status =
+      lastStatus === null
+        ? '无响应'
+        : `0x${lastStatus.toString(16).toUpperCase().padStart(2, '0')}`;
+    throw new Error(
+      `设备未通过配置握手（0xAA），最后状态 ${status}。请确认鼠标处于 2.4G 或有线模式且未被官方驱动占用。`,
+    );
+  }
+
   private async enterConfig(): Promise<CommandTrace> {
     const response = await this.commandOk(COMMAND.enterConfig, 0, EMPTY_CHUNK, 2500);
     return trace(response);
@@ -358,6 +382,7 @@ export class HecateHid {
 
   private async probeUnlocked(): Promise<ProbeResult> {
     const warnings: string[] = [];
+    const handshake = await this.handshake();
     const enter = await this.enterConfig();
 
     let headerRead: { data: Uint8Array; traces: CommandTrace[] };
@@ -368,11 +393,16 @@ export class HecateHid {
       headerRead = await this.readChunks(COMMAND.readHeader, HEADER_LENGTH);
       header = parseHeader(headerRead.data);
 
-      if (header.keyCount < 5 || header.keyCount > MAX_KEYS) {
-        warnings.push(`设备返回的按键数量为 ${header.keyCount}，超出可处理的 5–${MAX_KEYS} 范围。`);
-      } else {
-        keymapRead = await this.readChunks(COMMAND.readKeymap, header.keyCount * 3);
+      const magicValid = headerRead.data[0] === 0xaa && headerRead.data[1] === 0x55;
+      if (!magicValid || header.keyCount < 5 || header.keyCount > MAX_KEYS) {
+        const magic = Array.from(headerRead.data.slice(0, 2), (byte) =>
+          byte.toString(16).toUpperCase().padStart(2, '0'),
+        ).join(' ');
+        throw new Error(
+          `设备返回的配置头无效（标识 ${magic}，按键数量 ${header.keyCount}），请重新连接后重试。`,
+        );
       }
+      keymapRead = await this.readChunks(COMMAND.readKeymap, header.keyCount * 3);
     } catch (error) {
       try {
         await this.commit();
@@ -391,6 +421,7 @@ export class HecateHid {
 
     return {
       ok: true,
+      handshake,
       enter,
       header: {
         raw: headerRead.data,
@@ -424,6 +455,7 @@ export class HecateHid {
       );
     }
 
+    await this.handshake();
     await this.enterConfig();
 
     let headerRead: { data: Uint8Array; traces: CommandTrace[] };

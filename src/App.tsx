@@ -780,7 +780,7 @@ export default function App() {
               <h2>HECATE Connect · Web</h2>
               <p>为 HECATE G3M PRO 制作的浏览器配置界面，复刻桌面驱动的交互与视觉语言。</p>
             </div>
-            <span className="about-version">v1.1</span>
+            <span className="about-version">v1.2</span>
           </div>
 
           <div className="about-callout">
@@ -789,7 +789,8 @@ export default function App() {
               <strong>WebHID 硬件连接（实验性）</strong>
               <p>
                 使用桌面版 Chrome 或 Edge 连接鼠标后，网页可以读取按键表，并在你勾选确认后写入
-                5 个按键映射。DPI、性能校准、灯效与宏暂未实现硬件写入，仍只保存在本机浏览器。
+                5 个按键映射。握手、读取、写入与回读已在 G3M PRO（VID 320F / PID 706B）上验证。
+                DPI、性能校准、灯效与宏暂未实现硬件写入，仍只保存在本机浏览器。
                 协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
               </p>
             </div>
