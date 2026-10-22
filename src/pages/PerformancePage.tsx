@@ -51,7 +51,7 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
       <PageHeader
         kicker="SENSOR · POLLING · RESPONSE"
         title="性能与校准"
-        description="调整回报率、传感器修正与 Windows 指针行为。鼠标当前未连接，所有参数仅保存在本机配置中。"
+        description="调整回报率、传感器修正与 Windows 指针行为。本页参数仅保存在本机配置，暂不会写入鼠标硬件。"
         actions={
           <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
             <RotateCcw size={16} />
@@ -383,11 +383,11 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
 
       <section className="panel runtime-panel">
         <div className="runtime-copy">
-          <span className="section-kicker">OFFLINE CONFIGURATION</span>
-          <h2>离线配置模式</h2>
+          <span className="section-kicker">LOCAL CONFIGURATION</span>
+          <h2>本地配置模式</h2>
           <p>
-            网页版无法直接访问 G3M PRO 的厂商 HID 通道，因此这里的参数不会实时写入鼠标。你可以先保存为本地配置或导出 JSON，
-            待连接设备后对照原生驱动进行设置。
+            按键映射已可通过 WebHID 读写，但性能与校准参数尚未实现硬件写入。这里的设置会保存到本机配置，
+            也可以导出 JSON 留档，暂不会实时改变鼠标行为。
           </p>
         </div>
         <div className="runtime-list">
@@ -403,13 +403,13 @@ export function PerformancePage({ profile, onChange }: PerformancePageProps) {
           </div>
           <div className="runtime-item">
             <Info size={15} />
-            <span>写入 USB 设备</span>
-            <strong>不支持</strong>
+            <span>性能参数写入</span>
+            <strong>暂不支持</strong>
           </div>
           <div className="runtime-item">
             <Info size={15} />
             <span>实时回报率测试</span>
-            <strong>离线</strong>
+            <strong>未实现</strong>
           </div>
         </div>
       </section>

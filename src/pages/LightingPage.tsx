@@ -265,7 +265,7 @@ export function LightingPage({ profile, onChange, onNavigateDpi }: LightingPageP
           <div>
             <span className="section-kicker">NO HARDWARE WRITE</span>
             <h3>仅预览与保存</h3>
-            <p>灯光参数保存在浏览器配置中；网页无法实时控制鼠标 LED，请使用原生驱动应用。</p>
+            <p>灯光参数保存在浏览器配置中；网页版尚未实现 LED 硬件写入，请使用原生驱动应用。</p>
           </div>
         </div>
       </div>

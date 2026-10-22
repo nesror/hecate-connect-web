@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MODEL_INFO } from '../defaults';
 import { BUTTON_ORDER } from '../functions';
+import type { HidPhase } from '../hid/useHecateDevice';
 import type { PageId, Profile } from '../types';
 import { cx, formatDateTime } from '../utils';
 
@@ -32,6 +33,7 @@ interface SidebarProps {
   onDuplicateProfile: (profile: Profile) => void;
   onDeleteProfile: (profile: Profile) => void;
   onExportProfile: (profile: Profile) => void;
+  devicePhase: HidPhase;
   open: boolean;
   onClose: () => void;
 }
@@ -66,12 +68,23 @@ export function Sidebar({
   onDuplicateProfile,
   onDeleteProfile,
   onExportProfile,
+  devicePhase,
   open,
   onClose,
 }: SidebarProps) {
   const [menu, setMenu] = useState<ProfileMenuState | null>(null);
   const activeProfile = profiles.find((profile) => profile.id === activeId);
   const menuProfile = menu ? profiles.find((profile) => profile.id === menu.id) : null;
+  const deviceState =
+    devicePhase === 'connected'
+      ? { dot: 'is-online', label: '硬件已连接', tag: 'WebHID' }
+      : devicePhase === 'requesting' || devicePhase === 'connecting'
+        ? { dot: 'is-busy', label: '正在连接', tag: '请稍候' }
+        : devicePhase === 'error'
+          ? { dot: 'is-error', label: '连接异常', tag: '诊断' }
+          : devicePhase === 'unsupported'
+            ? { dot: 'is-offline', label: '浏览器不支持', tag: '离线' }
+            : { dot: 'is-offline', label: '设备未连接', tag: '离线配置' };
 
   useEffect(() => {
     if (!menu) return;
@@ -119,9 +132,9 @@ export function Sidebar({
             </div>
           </div>
           <div className="device-status-row">
-            <span className="status-dot is-offline" />
-            <strong>设备未连接</strong>
-            <span className="offline-tag">离线配置</span>
+            <span className={`status-dot ${deviceState.dot}`} />
+            <strong>{deviceState.label}</strong>
+            <span className="offline-tag">{deviceState.tag}</span>
           </div>
           <div className="device-specs">
             <div>
@@ -233,11 +246,11 @@ export function Sidebar({
             <ShieldCheck size={15} />
             <span>
               配置仅保存在本机浏览器
-              <small>网页版不会直接写入 USB 设备</small>
+              <small>连接后可读写按键表，写入前需手动确认</small>
             </span>
           </div>
           <div className="sidebar-version">
-            <span>WEB CONFIG v1.0</span>
+            <span>WEB CONFIG v1.1</span>
             <span>非官方</span>
           </div>
         </div>

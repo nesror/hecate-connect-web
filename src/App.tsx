@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BrandMark } from './components/Brand';
+import { DeviceModal } from './components/DeviceModal';
 import { Sidebar } from './components/Sidebar';
 import { SpaceBackground } from './components/SpaceBackground';
 import { TopBar } from './components/TopBar';
@@ -22,6 +23,7 @@ import {
   createDefaultBindings,
   defaultBindingFor,
 } from './functions';
+import { useHecateDevice } from './hid/useHecateDevice';
 import { DpiPage } from './pages/DpiPage';
 import { KeyBindingsPage } from './pages/KeyBindingsPage';
 import { LightingPage } from './pages/LightingPage';
@@ -91,6 +93,9 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  const device = useHecateDevice();
+  const [deviceOpen, setDeviceOpen] = useState(false);
+
   const [aboutOpen, setAboutOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<Profile | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -155,6 +160,10 @@ export default function App() {
 
   const bindButton = (button: ButtonId, binding: Binding) => {
     updateActive({ bindings: { ...activeProfile.bindings, [button]: binding } });
+  };
+
+  const applyDeviceBindings = (bindings: Record<ButtonId, Binding>) => {
+    updateActive({ bindings });
   };
 
   const addProfile = () => {
@@ -405,6 +414,7 @@ export default function App() {
         onDuplicateProfile={duplicateProfile}
         onDeleteProfile={setDeleteTarget}
         onExportProfile={openExport}
+        devicePhase={device.phase}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -412,6 +422,9 @@ export default function App() {
       <div className="app-main">
         <TopBar
           savedAt={saving ? null : savedAt}
+          devicePhase={device.phase}
+          deviceBusy={device.busy}
+          onOpenDevice={() => setDeviceOpen(true)}
           onMenu={() => setSidebarOpen(true)}
           onExport={() => openExport(activeProfile)}
           onImport={openImport}
@@ -420,16 +433,38 @@ export default function App() {
 
         <main className="content" ref={contentRef}>
           <div className="content-inner">
-            <div className="offline-banner">
+            <div
+              className={`offline-banner ${
+                device.phase === 'connected'
+                  ? 'is-online'
+                  : device.phase === 'error'
+                    ? 'is-error'
+                    : ''
+              }`}
+            >
               <span className="offline-banner-icon">
                 <Usb size={16} />
               </span>
               <div className="offline-banner-copy">
-                <strong>离线配置模式</strong>
-                <span>未检测到 G3M PRO。设置会保存到本机浏览器，不会写入鼠标硬件。</span>
+                <strong>
+                  {device.phase === 'connected'
+                    ? device.busy
+                      ? '硬件通信中'
+                      : '硬件已连接'
+                    : device.phase === 'error'
+                      ? '设备连接异常'
+                      : '离线配置模式'}
+                </strong>
+                <span>
+                  {device.phase === 'connected'
+                    ? '按键映射已可通过 WebHID 读写；DPI、性能、灯效与宏仍只保存在浏览器。'
+                    : device.phase === 'error'
+                      ? (device.error ?? '设备连接异常，点击查看诊断信息。')
+                      : '未连接 G3M PRO。设置会保存到本机浏览器；连接后可读写 5 个按键映射。'}
+                </span>
               </div>
-              <button type="button" onClick={() => setAboutOpen(true)}>
-                了解限制
+              <button type="button" onClick={() => setDeviceOpen(true)}>
+                {device.phase === 'connected' ? '设备详情' : '连接鼠标'}
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -440,13 +475,22 @@ export default function App() {
 
             <footer className="content-footer">
               <span>HECATE G3M PRO · 网页配置工具</span>
-              <span>非官方项目 · 数据仅存储于本机</span>
+              <span>非官方项目 · 数据默认仅存储于本机</span>
             </footer>
           </div>
         </main>
       </div>
 
       <ToastViewport toasts={toasts} onDismiss={(id) => setToasts((current) => current.filter((toast) => toast.id !== id))} />
+
+      <DeviceModal
+        open={deviceOpen}
+        onClose={() => setDeviceOpen(false)}
+        device={device}
+        profile={activeProfile}
+        onApplyBindings={applyDeviceBindings}
+        notify={pushToast}
+      />
 
       <Modal
         open={renameTarget !== null}
@@ -736,16 +780,17 @@ export default function App() {
               <h2>HECATE Connect · Web</h2>
               <p>为 HECATE G3M PRO 制作的浏览器配置界面，复刻桌面驱动的交互与视觉语言。</p>
             </div>
-            <span className="about-version">v1.0</span>
+            <span className="about-version">v1.1</span>
           </div>
 
           <div className="about-callout">
             <Usb size={19} />
             <div>
-              <strong>当前处于离线配置模式</strong>
+              <strong>WebHID 硬件连接（实验性）</strong>
               <p>
-                浏览器没有厂商私有 HID 协议的访问权限，网页版<strong>不能</strong>实时读取或写入 G3M PRO。
-                所有按键、DPI、性能、灯效与宏更改仅保存在本机浏览器，需要在原生驱动中重新设置才能作用于鼠标。
+                使用桌面版 Chrome 或 Edge 连接鼠标后，网页可以读取按键表，并在你勾选确认后写入
+                5 个按键映射。DPI、性能校准、灯效与宏暂未实现硬件写入，仍只保存在本机浏览器。
+                协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
               </p>
             </div>
           </div>
@@ -754,8 +799,8 @@ export default function App() {
             <div className="about-item">
               <span><ShieldCheck size={17} /></span>
               <div>
-                <strong>数据留在本机</strong>
-                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。清除浏览器站点数据会丢失配置，请定期导出备份。</p>
+                <strong>数据默认留在本机</strong>
+                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。只有你在设备面板中勾选确认后，按键映射才会写入鼠标硬件。</p>
               </div>
             </div>
             <div className="about-item">
