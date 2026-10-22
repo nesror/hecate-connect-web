@@ -1703,6 +1703,10 @@ svg {
   stroke-width: 1.6px;
 }
 
+.mouse-badges {
+  pointer-events: none;
+}
+
 .mouse-badge circle {
   fill: #061012;
   stroke: rgba(120, 238, 219, 0.32);
