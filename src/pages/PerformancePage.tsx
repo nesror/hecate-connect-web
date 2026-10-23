@@ -56,7 +56,7 @@ export function PerformancePage({
         title="性能与校准"
         description={
           rapoo
-            ? '回报率、去抖、LOD 与直线/波纹修正可发送到 Rapoo 接收器；接收器无法回读，发送后无法确认是否生效。'
+            ? '回报率、去抖、LOD 与直线/波纹修正可发送到 Rapoo 设备（2.4G 接收器或 USB 数据线）；两种连接都无法回读，发送后无法确认是否生效。'
             : '回报率、去抖、LOD 与直线/波纹修正可直接写入鼠标，写入完成后会自动回读核对。'
         }
         actions={
@@ -68,7 +68,7 @@ export function PerformancePage({
               title="性能设置"
               description={
                 rapoo
-                  ? '将回报率、去抖延时、静默高度与传感器修正发送到 Rapoo 接收器。接收器不支持回读，发送后无法确认是否生效。'
+                  ? '将回报率、去抖延时、静默高度与传感器修正发送到 Rapoo 设备。设备不支持回读，发送后无法确认是否生效。'
                   : '将回报率、去抖延时、静默高度与传感器修正写入鼠标板载配置，并即时应用回报率。'
               }
               onOpenDevice={onOpenDevice}
@@ -141,7 +141,9 @@ export function PerformancePage({
               <span className="section-kicker">REPORT RATE</span>
               <h2>回报率</h2>
             </div>
-            <span className="panel-note">{rapoo ? '2.4G 无线' : 'USB 有线模式'}</span>
+            <span className="panel-note">
+              {rapoo ? (device.rapooWired ? 'USB 有线' : '2.4G 无线') : 'USB 有线模式'}
+            </span>
           </div>
 
           <div className="polling-hero">
@@ -248,7 +250,7 @@ export function PerformancePage({
             <Sparkles size={15} />
             <span>
               {rapoo
-                ? 'Rapoo 的静默高度会与去抖设置一起发送到接收器；接收器无法回读，发送后请在鼠标上实际确认手感。'
+                ? 'Rapoo 的静默高度会与去抖设置一起发送到设备；无论 2.4G 还是 USB 有线都无法回读，发送后请在鼠标上实际确认手感。'
                 : 'PAW3395 支持 1–3 mm 静默高度；连接鼠标后，LOD 会与去抖设置一起写入板载配置。'}
             </span>
           </div>
@@ -308,7 +310,7 @@ export function PerformancePage({
           <h2>硬件操作范围</h2>
           <p>
             {rapoo
-              ? '连接接收器后，可把回报率、去抖、LOD 与直线/波纹修正发送到 Rapoo；接收器不支持回读，发送后无法确认是否生效。'
+              ? '连接接收器或 USB 数据线后，可把回报率、去抖、LOD 与直线/波纹修正发送到 Rapoo；两种连接都不支持回读，发送后无法确认是否生效。'
               : '连接鼠标后，可把回报率、去抖、LOD 与直线/波纹修正写入板载配置，并即时应用回报率；写入完成后会自动回读核对。'}
           </p>
         </div>
@@ -322,6 +324,11 @@ export function PerformancePage({
             {rapoo ? <Info size={15} /> : <Check size={15} />}
             <span>LOD / 去抖 / 传感器修正</span>
             <strong>{rapoo ? '未验证' : '可用'}</strong>
+          </div>
+          <div className={rapoo ? 'runtime-item' : 'runtime-item is-ok'}>
+            {rapoo ? <Info size={15} /> : <Check size={15} />}
+            <span>配置回读</span>
+            <strong>{rapoo ? '不可用' : '可用'}</strong>
           </div>
           <div className="runtime-item is-ok">
             <Check size={15} />

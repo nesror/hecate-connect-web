@@ -113,7 +113,7 @@ export class RapooHid {
     profile: Profile,
     sections: RapooWriteSections = { bindings: true, dpi: true, performance: true },
   ): Promise<RapooWriteResult> {
-    if (!this.device.opened) throw new Error('Rapoo 接收器尚未打开');
+    if (!this.device.opened) throw new Error('Rapoo 设备尚未打开');
     if (!sections.bindings && !sections.dpi && !sections.performance) {
       throw new Error('没有选择要写入的设置。');
     }
@@ -158,7 +158,7 @@ export class RapooHid {
 
     const skipped = plan.buttons.filter((item) => !item.written);
     const warnings = [
-      'Rapoo 接收器没有浏览器可读的配置回读通道，以上帧仅确认已交给浏览器发送，无法确认设备是否接受。',
+      'Rapoo 设备没有浏览器可读的配置回读通道，以上帧仅确认已交给浏览器发送，无法确认设备是否接受。',
     ];
     if (skipped.length > 0) {
       warnings.push(
@@ -186,7 +186,7 @@ export class RapooHid {
   }
 
   private async send(frame: Uint8Array): Promise<void> {
-    if (!this.device.opened) throw new Error('Rapoo 接收器尚未打开');
+    if (!this.device.opened) throw new Error('Rapoo 设备尚未打开');
     try {
       await this.device.sendReport(this.reportId, frame);
     } catch (error) {

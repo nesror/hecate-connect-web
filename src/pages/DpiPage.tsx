@@ -363,7 +363,7 @@ export function DpiPage({
         title="DPI 设置"
         description={
           rapoo
-            ? '配置 7 个 DPI 档位与 X/Y 灵敏度。Rapoo 接收器只发送已启用档位的 DPI 数值与当前档位；档位颜色仅保存在本机。'
+            ? '配置 7 个 DPI 档位与 X/Y 灵敏度。Rapoo 设备只发送已启用档位的 DPI 数值与当前档位；档位颜色仅保存在本机。'
             : '配置 7 个 DPI 档位、X/Y 灵敏度与档位颜色。滚轮后方的 DPI 按键会在这些档位之间循环，连接鼠标后可将档位与颜色写入板载配置。'
         }
         actions={
@@ -375,7 +375,7 @@ export function DpiPage({
               title={rapoo ? 'DPI 档位' : 'DPI 与档位颜色'}
               description={
                 rapoo
-                  ? '将已启用的 DPI 档位、X/Y 灵敏度与当前档位发送到 Rapoo 接收器。接收器无法回读确认。'
+                  ? '将已启用的 DPI 档位、X/Y 灵敏度与当前档位发送到 Rapoo 设备。设备无法回读确认。'
                   : '将 7 个 DPI 档位、X/Y 灵敏度、当前档位与档位颜色写入鼠标板载配置。'
               }
               onOpenDevice={onOpenDevice}

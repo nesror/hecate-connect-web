@@ -26,7 +26,7 @@ export const DEVICE_MODELS: Record<DeviceFamily, DeviceModelInfo> = {
     sensor: 'PAW3395',
     maxDpi: '26,000 DPI',
     polling: '1,000 Hz',
-    connection: '2.4G 无线',
+    connection: '2.4G / USB 有线',
     verified: false,
   },
 };

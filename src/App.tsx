@@ -478,7 +478,7 @@ export default function App() {
                 <span>
                   {device.phase === 'connected'
                     ? rapooDevice
-                      ? '按键、DPI、回报率与传感器设置会以“发送”方式写入 Rapoo 接收器；浏览器无法回读确认。宏仅保存在本地。'
+                      ? '按键、DPI、回报率与传感器设置会以“发送”方式写入 Rapoo 设备；浏览器无法回读确认。宏仅保存在本地。'
                       : '按键、DPI、回报率与传感器设置可写入鼠标；宏仍只保存在本地。'
                     : device.phase === 'error'
                       ? (device.error ?? '设备连接异常，点击查看诊断信息。')
@@ -816,8 +816,8 @@ export default function App() {
                 握手、读取、写入与回读已在 G3M PRO（VID 320F / PID 706B）上验证。
               </p>
               <p>
-                Rapoo VT9PRO 通过 2.4G 接收器（VID 24AE）的 0xBA 输出报告发送配置。接收器不提供浏览器可读的
-                回读通道，因此 Rapoo 写入属于实验性功能，网页只会显示“已发送”，不会声称验证成功。宏仍只保存在本地。
+                Rapoo VT9PRO 通过 0xBA 输出报告发送配置，2.4G 接收器（VID 24AE / PID 185A）与 USB 有线（PID
+                418A）共用同一组协议地址。两种连接都不提供浏览器可读的回读通道，因此 Rapoo 写入属于实验性功能，网页只会显示“已发送”，不会声称验证成功。宏仍只保存在本地。
                 协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
               </p>
             </div>
@@ -828,7 +828,7 @@ export default function App() {
               <span><ShieldCheck size={17} /></span>
               <div>
                 <strong>数据默认留在本机</strong>
-                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。只有你在设备面板或页面写入按钮中确认后，配置才会写入鼠标硬件或发送到接收器。</p>
+                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。只有你在设备面板或页面写入按钮中确认后，配置才会写入鼠标硬件或发送到 Rapoo 设备。</p>
               </div>
             </div>
             <div className="about-item">

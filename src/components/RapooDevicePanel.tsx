@@ -52,35 +52,36 @@ function statusCopy(device: MouseController): {
     return {
       tone: 'is-busy',
       title: '正在选择设备',
-      detail: '请在浏览器弹出的 HID 设备列表中选择 Rapoo 接收器（通常显示为 “Rapoo Gaming Device”）。',
+      detail: '请在浏览器弹出的 HID 设备列表中选择 Rapoo 设备（通常显示为 “Rapoo Gaming Device”）。',
     };
   }
   if (device.phase === 'connecting') {
     return {
       tone: 'is-busy',
-      title: '正在打开接收器',
+      title: '正在打开 Rapoo 设备',
       detail: '正在打开 0xBA 输出报告并发送探测与解锁帧。',
     };
   }
   if (device.phase === 'connected') {
     return {
       tone: 'is-online',
-      title: device.busy ? '正在与接收器通信' : 'Rapoo 接收器已连接 · 仅发送模式',
+      title: device.busy ? '正在与 Rapoo 设备通信' : 'Rapoo 设备已连接 · 仅发送模式',
       detail:
-        '输出报告 0xBA 可用。接收器没有浏览器可读的配置回读通道，发出的设置无法在网页中确认是否生效。',
+        '输出报告 0xBA 可用。无论 2.4G 还是 USB 有线，设备都没有浏览器可读的配置回读通道，发出的设置无法在网页中确认是否生效。',
     };
   }
   if (device.phase === 'error') {
     return {
       tone: 'is-error',
       title: '连接异常',
-      detail: device.error ?? '接收器握手失败。请重新插拔接收器，并确认官方驱动没有占用设备。',
+      detail:
+        device.error ?? 'Rapoo 握手失败。请重新插拔接收器或重新连接 USB 数据线，并确认官方驱动没有占用设备。',
     };
   }
   return {
     tone: 'is-offline',
-    title: '尚未连接 Rapoo 接收器',
-    detail: '把 2.4G 接收器插入 USB 口并打开鼠标，然后点击“连接设备”。',
+    title: '尚未连接 Rapoo 设备',
+    detail: '连接 2.4G 接收器或 USB 数据线并打开鼠标，然后点击“连接设备”。',
   };
 }
 
@@ -142,7 +143,7 @@ export function RapooDevicePanel({
       open={open}
       onClose={onClose}
       title="Rapoo 设备连接"
-      description="通过 WebHID 向 Rapoo VT9PRO 接收器发送按键、DPI 与性能配置。接收器不支持配置回读，写入属于实验性功能。"
+      description="通过 WebHID 向 Rapoo VT9PRO 发送按键、DPI 与性能配置。2.4G 接收器与 USB 有线连接共用 0xBA 输出报告，均不支持配置回读，写入属于实验性功能。"
       size="wide"
     >
       <div className="device-panel">
@@ -201,23 +202,24 @@ export function RapooDevicePanel({
               <li>
                 <span>01</span>
                 <div>
-                  <strong>插入 2.4G 接收器并打开鼠标</strong>
-                  <p>将 Rapoo 接收器直接插入电脑 USB 口，确认鼠标处于 2.4G 无线模式并有电。</p>
+                  <strong>连接 2.4G 接收器或 USB 数据线</strong>
+                  <p>插入接收器，或用 USB 数据线直接连接鼠标；无线模式请确认鼠标有电。</p>
                 </div>
               </li>
               <li>
                 <span>02</span>
                 <div>
                   <strong>关闭官方 RapooGameDev</strong>
-                  <p>官方驱动会同时打开接收器的厂商接口；请先完全退出，避免端口被占用。</p>
+                  <p>官方驱动会同时打开设备的厂商接口；请先完全退出，避免端口被占用。</p>
                 </div>
               </li>
               <li>
                 <span>03</span>
                 <div>
-                  <strong>在浏览器中选择接收器</strong>
+                  <strong>在浏览器中选择 Rapoo 设备</strong>
                   <p>
-                    点击“连接设备”，选择 “Rapoo Gaming Device”（VID 24AE · Usage FF00:000E）。
+                    点击“连接设备”，选择 “Rapoo Gaming Device”（VID 24AE · Usage FF00:000E；有线 PID
+                    418A）。
                   </p>
                 </div>
               </li>
@@ -248,6 +250,10 @@ export function RapooDevicePanel({
                 {device.descriptor.manufacturerName || '未知厂商'} ·{' '}
                 {device.descriptor.productName || 'HID 设备'}
               </strong>
+            </div>
+            <div className="device-info-item">
+              <span>连接方式</span>
+              <strong>{device.rapooWired ? 'USB 数据线' : '2.4G 接收器'}</strong>
             </div>
             <div className="device-info-item">
               <span>VID / PID</span>
@@ -294,7 +300,7 @@ export function RapooDevicePanel({
             <div className="inline-note is-warning">
               <AlertTriangle size={15} />
               <div>
-                接收器不会向浏览器返回配置数据。这里的“已发送”只代表帧已交给 WebHID，不能证明设备已接受或保存。
+                接收器或 USB 有线设备都不会向浏览器返回配置数据。这里的“已发送”只代表帧已交给 WebHID，不能证明设备已接受或保存。
               </div>
             </div>
           </div>
@@ -396,9 +402,9 @@ export function RapooDevicePanel({
                 <div>
                   <strong>发送按键、DPI 与性能设置</strong>
                   <p>
-                    将 {plan.commands.length} 个配置帧发送到接收器：{plan.dpi?.count ?? 0} 档 DPI（不含颜色）、
+                    将 {plan.commands.length} 个配置帧发送到 Rapoo 设备：{plan.dpi?.count ?? 0} 档 DPI（不含颜色）、
                     回报率、LOD、去抖、传感器修正与 {plan.buttons.filter((item) => item.written).length}{' '}
-                    个按键映射。Rapoo 接收器不支持回读，发送后无法确认设备是否接受。
+                    个按键映射。2.4G 与 USB 有线都不支持回读，发送后无法确认设备是否接受。
                   </p>
                 </div>
               </div>
@@ -421,7 +427,7 @@ export function RapooDevicePanel({
                   onChange={(event) => setConfirmed(event.target.checked)}
                 />
                 <span>
-                  我确认要把当前配置发送到 Rapoo 接收器。本操作无法回读验证，请勿在发送期间拔出接收器。
+                  我确认要把当前配置发送到 Rapoo 设备。本操作无法回读验证，请勿在发送期间断开接收器或 USB 数据线。
                 </span>
               </label>
 
@@ -432,7 +438,7 @@ export function RapooDevicePanel({
                 onClick={() => void handleWrite()}
               >
                 {device.busy ? <RefreshCw size={15} className="is-spinning" /> : <Zap size={15} />}
-                {device.busy ? '正在发送配置帧…' : '发送配置到接收器'}
+                {device.busy ? '正在发送配置帧…' : '发送配置到设备'}
               </button>
             </div>
 
@@ -475,7 +481,7 @@ export function RapooDevicePanel({
               输出报告 ID {byteHex(RAPOO_REPORT_ID)}；配置集合 Usage FF00:000E；无特性报告。写入帧为 A5 A5 +
               长度 + 地址 + Bank + 数据，使用系统 Bank {byteHex(RAPOO_BANKS.system)}、按键 Bank{' '}
               {byteHex(RAPOO_BANKS.button)}。协议地址来自公开逆向资料与官方驱动静态分析，尚未在 VT9PRO
-              上逐项验证。
+              上逐项验证；USB 有线模式（PID 418A）暴露同样的 0xBA 31 字节报告，地址与编码同样未经真机确认。
             </span>
           </div>
         </details>
@@ -483,8 +489,8 @@ export function RapooDevicePanel({
         <div className="inline-note is-warning">
           <AlertTriangle size={15} />
           <div>
-            Rapoo 支持属于实验性功能，只能发送配置、无法回读验证。宏、系统电源动作与 DPI +/− 不会写入接收器；
-            如果设置后行为异常，请退出本页面，使用官方 RapooGameDev 或接收器重置方式恢复。
+            Rapoo 支持属于实验性功能，只能发送配置、无法回读验证。宏、系统电源动作与 DPI +/− 不会写入设备；
+            如果设置后行为异常，请退出本页面，使用官方 RapooGameDev 恢复。
           </div>
         </div>
       </div>

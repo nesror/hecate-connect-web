@@ -79,7 +79,7 @@ export function Sidebar({
     devicePhase === 'connected'
       ? model.verified
         ? { dot: 'is-online', label: '硬件已连接', tag: 'WebHID' }
-        : { dot: 'is-online', label: '接收器已连接', tag: '仅发送' }
+        : { dot: 'is-online', label: 'Rapoo 已连接', tag: '仅发送' }
       : devicePhase === 'requesting' || devicePhase === 'connecting'
         ? { dot: 'is-busy', label: '正在连接', tag: '请稍候' }
         : devicePhase === 'error'

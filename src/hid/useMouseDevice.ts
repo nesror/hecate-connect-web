@@ -15,6 +15,7 @@ import {
   RAPOO_USAGE,
   RAPOO_USAGE_PAGE,
   RAPOO_VENDOR_ID,
+  RAPOO_WIRED_PRODUCT_ID,
 } from './rapooProtocol';
 import { RapooHid, type RapooProbe, type RapooWriteResult } from './RapooHid';
 
@@ -57,6 +58,7 @@ export interface MouseController {
   descriptor: HidDescriptor | null;
   probe: ProbeResult | null;
   rapooProbe: RapooProbe | null;
+  rapooWired: boolean;
   reportId: number;
   setReportId: (value: number) => void;
   grantedCount: number;
@@ -83,6 +85,7 @@ export function detectFamily(device: HIDDevice): DeviceFamily | null {
   if (
     device.vendorId === RAPOO_VENDOR_ID &&
     (device.productId === RAPOO_PRODUCT_ID ||
+      device.productId === RAPOO_WIRED_PRODUCT_ID ||
       hasVendorCollection(device, RAPOO_USAGE_PAGE, [RAPOO_USAGE]))
   ) {
     return 'rapoo';
@@ -105,6 +108,7 @@ export function useMouseDevice(): MouseController {
   const [descriptor, setDescriptor] = useState<HidDescriptor | null>(null);
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const [rapooProbe, setRapooProbe] = useState<RapooProbe | null>(null);
+  const [rapooWired, setRapooWired] = useState(false);
   const [reportId, setReportIdState] = useState(REPORT_ID);
   const [grantedCount, setGrantedCount] = useState(0);
 
@@ -127,7 +131,7 @@ export function useMouseDevice(): MouseController {
     const nextFamily = detectFamily(device);
     if (!nextFamily) {
       setError(
-        '所选设备不是已支持的鼠标。请选择 HECATE G3M PRO，或插入 Rapoo VT9PRO 的 2.4G 接收器后重试。',
+        '所选设备不是已支持的鼠标。请选择 HECATE G3M PRO，或连接 Rapoo VT9PRO 的 2.4G 接收器 / USB 数据线后重试。',
       );
       setPhase('error');
       return;
@@ -140,6 +144,7 @@ export function useMouseDevice(): MouseController {
 
     familyRef.current = nextFamily;
     setFamily(nextFamily);
+    setRapooWired(nextFamily === 'rapoo' && device.productId === RAPOO_WIRED_PRODUCT_ID);
     setPhase('connecting');
     setError(null);
     setDescriptor(null);
@@ -232,6 +237,7 @@ export function useMouseDevice(): MouseController {
     setBusy(false);
     setDescriptor(null);
     resetProbe();
+    setRapooWired(false);
     setError(null);
     setPhase(supported ? 'idle' : 'unsupported');
     if (hid) await hid.close().catch(() => undefined);
@@ -328,9 +334,10 @@ export function useMouseDevice(): MouseController {
         setDescriptor(null);
         resetProbe();
         setBusy(false);
+        setRapooWired(false);
         setError(
           familyRef.current === 'rapoo'
-            ? 'Rapoo 接收器已断开。请重新插入 2.4G 接收器后再试。'
+            ? 'Rapoo 设备已断开。请重新插入 2.4G 接收器或连接 USB 数据线后再试。'
             : '鼠标已断开。请重新连接 USB 数据线后再试。',
         );
         setPhase('error');
@@ -355,6 +362,7 @@ export function useMouseDevice(): MouseController {
     descriptor,
     probe,
     rapooProbe,
+    rapooWired,
     reportId,
     setReportId,
     grantedCount,

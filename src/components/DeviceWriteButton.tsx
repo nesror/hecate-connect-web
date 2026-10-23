@@ -56,7 +56,7 @@ export function DeviceWriteButton({
           title: result.frames > 0 ? '配置已发送（未验证）' : '没有可发送的项',
           detail:
             result.frames > 0
-              ? `已向 Rapoo 接收器发送 ${result.frames} 个配置帧；浏览器无法回读确认是否生效。${
+              ? `已向 Rapoo 设备发送 ${result.frames} 个配置帧；浏览器无法回读确认是否生效。${
                   skipped > 0 ? ` ${skipped} 个按键保留设备原值。` : ''
                 }`
               : result.warnings[0] ?? '当前设置没有可通过 Rapoo 协议发送的项。',
@@ -93,7 +93,7 @@ export function DeviceWriteButton({
     <>
       <button type="button" className="outline-button" disabled={busy} onClick={handleOpen}>
         {connected ? <Zap size={16} /> : <Usb size={16} />}
-        {connected ? (rapoo ? '发送到接收器' : '写入鼠标') : '连接鼠标以写入'}
+        {connected ? (rapoo ? '发送到设备' : '写入鼠标') : '连接鼠标以写入'}
       </button>
 
       <Modal
@@ -127,7 +127,7 @@ export function DeviceWriteButton({
         <div className={rapoo ? 'inline-note is-warning' : 'inline-note'}>
           <Usb size={15} />
           {rapoo
-            ? '发送期间请勿拔出 Rapoo 接收器。接收器不支持配置回读，完成后无法在浏览器中验证是否生效。'
+            ? '发送期间请勿断开 Rapoo 接收器或 USB 数据线。设备不支持配置回读，完成后无法在浏览器中验证是否生效。'
             : '写入期间请勿拔下鼠标。完成后会自动重新读取设备，核对配置块中的目标字节与回报率。'}
         </div>
       </Modal>

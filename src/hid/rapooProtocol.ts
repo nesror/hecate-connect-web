@@ -4,6 +4,7 @@ import { clamp } from '../utils';
 
 export const RAPOO_VENDOR_ID = 0x24ae;
 export const RAPOO_PRODUCT_ID = 0x185a;
+export const RAPOO_WIRED_PRODUCT_ID = 0x418a;
 export const RAPOO_USAGE_PAGE = 0xff00;
 export const RAPOO_USAGE = 0x0e;
 export const RAPOO_REPORT_ID = 0xba;

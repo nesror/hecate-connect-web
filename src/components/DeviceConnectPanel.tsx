@@ -24,7 +24,7 @@ function statusCopy(device: MouseController): {
     return {
       tone: 'is-busy',
       title: '正在选择设备',
-      detail: '请在 HID 设备列表中选择 HECATE 鼠标或 Rapoo 接收器。',
+      detail: '请在 HID 设备列表中选择 HECATE 鼠标或 Rapoo 设备。',
     };
   }
   if (device.phase === 'connecting') {
@@ -33,7 +33,7 @@ function statusCopy(device: MouseController): {
       title: '正在打开设备',
       detail:
         device.family === 'rapoo'
-          ? '正在打开 Rapoo 接收器并发送探测与解锁帧。'
+          ? '正在打开 Rapoo 设备并发送探测与解锁帧。'
           : '正在建立 WebHID 连接并读取设备头。',
     };
   }
@@ -47,7 +47,8 @@ function statusCopy(device: MouseController): {
   return {
     tone: 'is-offline',
     title: '连接你的鼠标',
-    detail: '支持 HECATE G3M PRO 与 Rapoo VT9PRO 2.4G 接收器，两种设备可分别在同一个网页中连接。',
+    detail:
+      '支持 HECATE G3M PRO 与 Rapoo VT9PRO（2.4G 接收器或 USB 数据线），两种设备可分别在同一个网页中连接。',
   };
 }
 
@@ -107,7 +108,7 @@ export function DeviceConnectPanel({ open, onClose, device }: DeviceConnectPanel
           </div>
           <div className="device-info-item">
             <span>Rapoo 连接方式</span>
-            <strong>2.4G 接收器 · VID 24AE</strong>
+            <strong>2.4G 接收器或 USB 数据线 · VID 24AE</strong>
           </div>
         </div>
 
@@ -117,7 +118,8 @@ export function DeviceConnectPanel({ open, onClose, device }: DeviceConnectPanel
             <div>
               <strong>准备设备</strong>
               <p>
-                HECATE 建议使用 USB 数据线连接；Rapoo 请插入 2.4G 接收器并打开鼠标。两种设备都需要保持开机。
+                HECATE 建议使用 USB 数据线连接；Rapoo 可插入 2.4G 接收器，或用 USB 数据线直接连接鼠标。
+                两种设备都需要保持开机。
               </p>
             </div>
           </li>
@@ -133,8 +135,8 @@ export function DeviceConnectPanel({ open, onClose, device }: DeviceConnectPanel
             <div>
               <strong>在浏览器中选择设备</strong>
               <p>
-                点击“连接设备”，在 HID 列表中选择鼠标。Rapoo 接收器通常显示为 “Rapoo Gaming
-                Device”（VID 24AE · Usage FF00:000E）。
+                点击“连接设备”，在 HID 列表中选择鼠标。Rapoo 设备通常显示为 “Rapoo Gaming
+                Device”（VID 24AE · Usage FF00:000E；接收器 PID 185A，USB 有线 PID 418A）。
               </p>
             </div>
           </li>
@@ -156,7 +158,7 @@ export function DeviceConnectPanel({ open, onClose, device }: DeviceConnectPanel
         <div className="inline-note is-warning">
           <AlertTriangle size={15} />
           <div>
-            Rapoo 接收器只提供写入报告通道，浏览器无法读取它的板载配置。Rapoo 写入属于实验性功能，发送后无法确认是否生效；
+            Rapoo 设备只提供写入报告通道，浏览器无法读取它的板载配置。Rapoo 写入属于实验性功能，发送后无法确认是否生效；
             HECATE G3M PRO 仍会在写入后自动回读验证。
           </div>
         </div>
