@@ -8,6 +8,7 @@ export const RAPOO_WIRED_PRODUCT_ID = 0x418a;
 export const RAPOO_USAGE_PAGE = 0xff00;
 export const RAPOO_USAGE = 0x0e;
 export const RAPOO_REPORT_ID = 0xba;
+export const RAPOO_BATTERY_REPORT_ID = 0xbb;
 export const RAPOO_REPORT_DATA_LENGTH = 31;
 export const RAPOO_MAX_DPI_STAGES = 7;
 
@@ -44,6 +45,8 @@ export const RAPOO_BUTTON_SLOTS: ReadonlyArray<{ button: ButtonId; addr: number 
   { button: 'forward', addr: 0x14 },
   { button: 'back', addr: 0x18 },
   { button: 'dpi', addr: 0x34 },
+  { button: 'dpiUp', addr: 0x0c },
+  { button: 'dpiDown', addr: 0x10 },
 ];
 
 const POLLING_CODE: Record<number, number> = {
@@ -213,7 +216,10 @@ export function rapooBindingBytes(binding: Binding): number[] | null {
     case 'mouse':
       return [0x03, 0x00, MOUSE_FUNCTION_CODE[binding.id], 0x00];
     case 'dpi':
-      return binding.id === 'cycle' ? [0x08, 0x00, 0x03, 0x00] : null;
+      if (binding.id === 'cycle') return [0x08, 0x00, 0x03, 0x00];
+      if (binding.id === 'up') return [0x08, 0x00, 0x05, 0x00];
+      if (binding.id === 'down') return [0x08, 0x00, 0x06, 0x00];
+      return null;
     case 'key': {
       const hardware = keyboardHardwareUsage(binding.code);
       if (!hardware) return null;
@@ -238,8 +244,31 @@ export function rapooBindingBytes(binding: Binding): number[] | null {
 function skipReason(binding: Binding): string {
   if (binding.kind === 'macro') return '宏未写入固件，保留设备原值';
   if (binding.kind === 'system') return 'Rapoo 的电源/睡眠动作代码尚未确认';
-  if (binding.kind === 'dpi') return 'Rapoo 的 DPI +/− 动作代码尚未确认';
   return '该功能没有确认的 Rapoo 动作代码';
+}
+
+export interface RapooBatteryState {
+  percent: number;
+  voltage: number | null;
+  charging: boolean;
+  currentmA: number | null;
+  receivedAt: string;
+}
+
+export function parseRapooBatteryReport(data: DataView): RapooBatteryState | null {
+  if (data.byteLength < 7) return null;
+  if (data.getUint8(0) !== RAPOO_BATTERY_REPORT_ID || data.getUint8(1) !== 0xb0) return null;
+  const voltageRaw = data.getUint8(2);
+  const voltage = voltageRaw > 0 ? (voltageRaw >> 4) + (voltageRaw & 0x0f) / 10 : null;
+  const current = data.getUint8(4) | (data.getUint8(5) << 8);
+  const percent = clamp(data.getUint8(6), 0, 100);
+  return {
+    percent,
+    voltage,
+    charging: current > 0,
+    currentmA: current > 0 ? current : null,
+    receivedAt: new Date().toISOString(),
+  };
 }
 
 export function buildRapooPlan(

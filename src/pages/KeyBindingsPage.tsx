@@ -25,6 +25,7 @@ import {
   buildBinding,
   BUTTON_META,
   BUTTON_ORDER,
+  RAPOO_BUTTON_ORDER,
   defaultBindingFor,
   getFunctionCategories,
   type FunctionCategoryId,
@@ -64,6 +65,8 @@ export function KeyBindingsPage({
   onNavigateMacros,
 }: KeyBindingsPageProps) {
   const rapoo = device.family === 'rapoo';
+  const buttonOrder = rapoo ? RAPOO_BUTTON_ORDER : BUTTON_ORDER;
+  const keyCount = buttonOrder.length;
   const [selectedButton, setSelectedButton] = useState<ButtonId>('left');
   const [category, setCategory] = useState<FunctionCategoryId>('mouse');
   const [search, setSearch] = useState('');
@@ -129,12 +132,12 @@ export function KeyBindingsPage({
   return (
     <div className="page key-page">
       <PageHeader
-        kicker="BUTTON REMAP · 6 KEYS"
+        kicker={`BUTTON REMAP · ${keyCount} KEYS`}
         title="按键设定"
         description={
           rapoo
-            ? '点击鼠标示意图上的编号，为 Rapoo VT9PRO 的 6 个物理按键分配功能。设备只发送鼠标、键盘、多媒体与 DPI 循环动作；宏与未确认功能仅保存在本机。'
-            : '点击鼠标示意图上的编号，将 6 个物理按键映射为鼠标、键盘、宏或系统功能。'
+            ? `点击鼠标示意图上的编号，为 Rapoo VT9PRO 的 ${keyCount} 个物理按键分配功能。设备只发送鼠标、键盘、多媒体与 DPI 动作；宏与未确认功能仅保存在本机。`
+            : `点击鼠标示意图上的编号，将 ${keyCount} 个物理按键映射为鼠标、键盘、宏或系统功能。`
         }
         actions={
           <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
@@ -158,13 +161,14 @@ export function KeyBindingsPage({
             <div className="mouse-halo" />
             <MouseIllustration
               device={rapoo ? 'rapoo' : 'hecate'}
+              buttons={buttonOrder}
               selected={selectedButton}
               onSelect={selectButton}
             />
           </div>
 
           <div className="key-legend">
-            {BUTTON_ORDER.map((button) => {
+            {buttonOrder.map((button) => {
               const meta = BUTTON_META[button];
               const binding = profile.bindings[button];
               return (

@@ -129,8 +129,9 @@ export function normalizeProfile(input: unknown, fallbackName = '配置文件'):
   const base = createDefaultProfile(fallbackName);
   const rawBindings = isRecord(input.bindings) ? input.bindings : {};
   const fallbackBindings = createDefaultBindings();
+  const allButtons: ButtonId[] = [...BUTTON_ORDER, 'dpiUp', 'dpiDown'];
   const bindings = Object.fromEntries(
-    BUTTON_ORDER.map((button) => [
+    allButtons.map((button) => [
       button,
       normalizeBinding(rawBindings[button], fallbackBindings[button]),
     ]),

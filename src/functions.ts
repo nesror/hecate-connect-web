@@ -30,6 +30,17 @@ export interface FunctionCategory {
 
 export const BUTTON_ORDER: ButtonId[] = ['left', 'right', 'wheel', 'forward', 'back', 'dpi'];
 
+export const RAPOO_BUTTON_ORDER: ButtonId[] = [
+  'left',
+  'right',
+  'wheel',
+  'forward',
+  'back',
+  'dpi',
+  'dpiUp',
+  'dpiDown',
+];
+
 export const BUTTON_META: Record<
   ButtonId,
   { label: string; shortLabel: string; description: string; index: number }
@@ -40,6 +51,18 @@ export const BUTTON_META: Record<
   forward: { label: '侧键 · 前进', shortLabel: '前进', description: '左侧靠近前端的侧键', index: 4 },
   back: { label: '侧键 · 后退', shortLabel: '后退', description: '左侧靠近后端的侧键', index: 5 },
   dpi: { label: 'DPI 键', shortLabel: 'DPI', description: '滚轮后方的 DPI 切换键', index: 6 },
+  dpiUp: {
+    label: 'DPI + 键',
+    shortLabel: 'DPI+',
+    description: '提升 DPI 档位（Rapoo VT9PRO）',
+    index: 7,
+  },
+  dpiDown: {
+    label: 'DPI − 键',
+    shortLabel: 'DPI−',
+    description: '降低 DPI 档位（Rapoo VT9PRO）',
+    index: 8,
+  },
 };
 
 const MOUSE_VENDOR: Record<MouseFunctionId, number> = {
@@ -466,6 +489,10 @@ export function defaultBindingFor(button: ButtonId): Binding {
       return buildBinding('mouse', 'back', []);
     case 'dpi':
       return buildBinding('dpi', 'cycle', []);
+    case 'dpiUp':
+      return buildBinding('dpi', 'up', []);
+    case 'dpiDown':
+      return buildBinding('dpi', 'down', []);
   }
 }
 
@@ -477,6 +504,8 @@ export function createDefaultBindings(): Record<ButtonId, Binding> {
     forward: defaultBindingFor('forward'),
     back: defaultBindingFor('back'),
     dpi: defaultBindingFor('dpi'),
+    dpiUp: defaultBindingFor('dpiUp'),
+    dpiDown: defaultBindingFor('dpiDown'),
   };
 }
 

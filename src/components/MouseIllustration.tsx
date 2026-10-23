@@ -7,6 +7,7 @@ interface MouseIllustrationProps {
   selected?: ButtonId | null;
   onSelect?: (button: ButtonId) => void;
   device?: 'hecate' | 'rapoo';
+  buttons?: ButtonId[];
   className?: string;
   showBadges?: boolean;
 }
@@ -51,12 +52,15 @@ const BADGE_POSITIONS: Record<ButtonId, { x: number; y: number }> = {
   forward: { x: 62, y: 225 },
   back: { x: 63, y: 298 },
   dpi: { x: 226, y: 214 },
+  dpiUp: { x: 256, y: 276 },
+  dpiDown: { x: 257, y: 336 },
 };
 
 export function MouseIllustration({
   selected,
   onSelect,
   device = 'hecate',
+  buttons = BUTTON_ORDER,
   className,
   showBadges = true,
 }: MouseIllustrationProps) {
@@ -452,7 +456,7 @@ export function MouseIllustration({
 
       {showBadges && (
         <g className="mouse-badges" aria-hidden="true">
-          {BUTTON_ORDER.map((button) => {
+          {buttons.map((button) => {
             const position = BADGE_POSITIONS[button];
             const active = selected === button;
             return (

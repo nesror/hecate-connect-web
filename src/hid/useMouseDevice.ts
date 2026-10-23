@@ -16,6 +16,7 @@ import {
   RAPOO_USAGE_PAGE,
   RAPOO_VENDOR_ID,
   RAPOO_WIRED_PRODUCT_ID,
+  type RapooBatteryState,
 } from './rapooProtocol';
 import { RapooHid, type RapooProbe, type RapooWriteResult } from './RapooHid';
 
@@ -59,6 +60,7 @@ export interface MouseController {
   probe: ProbeResult | null;
   rapooProbe: RapooProbe | null;
   rapooWired: boolean;
+  rapooBattery: RapooBatteryState | null;
   reportId: number;
   setReportId: (value: number) => void;
   grantedCount: number;
@@ -109,6 +111,7 @@ export function useMouseDevice(): MouseController {
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const [rapooProbe, setRapooProbe] = useState<RapooProbe | null>(null);
   const [rapooWired, setRapooWired] = useState(false);
+  const [rapooBattery, setRapooBattery] = useState<RapooBatteryState | null>(null);
   const [reportId, setReportIdState] = useState(REPORT_ID);
   const [grantedCount, setGrantedCount] = useState(0);
 
@@ -125,6 +128,7 @@ export function useMouseDevice(): MouseController {
   const resetProbe = () => {
     setProbe(null);
     setRapooProbe(null);
+    setRapooBattery(null);
   };
 
   const openDevice = useCallback(async (device: HIDDevice) => {
@@ -161,6 +165,7 @@ export function useMouseDevice(): MouseController {
         const result = await hid.probe();
         setProbe(result);
       } else {
+        hid.onBattery = (state) => setRapooBattery(state);
         const session = await hid.open();
         hidRef.current = hid;
         setDescriptor(hid.descriptor);
@@ -363,6 +368,7 @@ export function useMouseDevice(): MouseController {
     probe,
     rapooProbe,
     rapooWired,
+    rapooBattery,
     reportId,
     setReportId,
     grantedCount,

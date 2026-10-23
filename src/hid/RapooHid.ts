@@ -3,11 +3,14 @@ import type { Profile } from '../types';
 import { describeHidDevice, type HidDescriptor } from './descriptor';
 import {
   buildRapooPlan,
+  parseRapooBatteryReport,
   probeFrame,
+  RAPOO_BATTERY_REPORT_ID,
   RAPOO_REPORT_DATA_LENGTH,
   RAPOO_REPORT_ID,
   unlockFrame,
   writeFrame,
+  type RapooBatteryState,
   type RapooButtonWrite,
   type RapooDpiWrite,
   type RapooPerformanceWrite,
@@ -63,6 +66,13 @@ export class RapooHid {
   readonly reportId: number;
 
   private reportDataLength = RAPOO_REPORT_DATA_LENGTH;
+  private readonly batteryListener = (event: HIDInputReportEvent) => {
+    if (event.reportId !== RAPOO_BATTERY_REPORT_ID) return;
+    const state = parseRapooBatteryReport(event.data);
+    if (state) this.onBattery?.(state);
+  };
+
+  onBattery: ((state: RapooBatteryState) => void) | null = null;
 
   constructor(device: HIDDevice, reportId = RAPOO_REPORT_ID) {
     this.device = device;
@@ -75,6 +85,7 @@ export class RapooHid {
 
   async open(): Promise<RapooSession> {
     if (!this.device.opened) await this.device.open();
+    this.device.addEventListener('inputreport', this.batteryListener as EventListener);
 
     await this.send(probeFrame());
     await delay(HANDSHAKE_GAP_MS);
@@ -89,6 +100,7 @@ export class RapooHid {
   }
 
   async close(): Promise<void> {
+    this.device.removeEventListener('inputreport', this.batteryListener as EventListener);
     if (!this.device.opened) return;
     try {
       await this.device.close();
@@ -131,7 +143,7 @@ export class RapooHid {
         performance: plan.performance,
         buttons: plan.buttons,
         warnings: [
-          '当前配置中没有可通过 Rapoo 协议写入的按键；宏、系统动作与 DPI +/− 仍保留设备原值。',
+          '当前配置中没有可通过 Rapoo 协议写入的按键；宏与系统动作仍保留设备原值。',
         ],
         sentAt: new Date().toISOString(),
       };
@@ -158,7 +170,7 @@ export class RapooHid {
 
     const skipped = plan.buttons.filter((item) => !item.written);
     const warnings = [
-      'Rapoo 设备没有浏览器可读的配置回读通道，以上帧仅确认已交给浏览器发送，无法确认设备是否接受。',
+      'Rapoo 设备不支持浏览器可读的配置回读，以上帧仅确认已交给浏览器发送，无法确认设备是否接受。',
     ];
     if (skipped.length > 0) {
       warnings.push(

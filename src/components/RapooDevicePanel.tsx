@@ -256,6 +256,20 @@ export function RapooDevicePanel({
               <strong>{device.rapooWired ? 'USB 数据线' : '2.4G 接收器'}</strong>
             </div>
             <div className="device-info-item">
+              <span>电量</span>
+              <strong>
+                {device.rapooBattery
+                  ? `${device.rapooBattery.percent}%${
+                      device.rapooBattery.charging
+                        ? ' · 充电中'
+                        : device.rapooBattery.voltage !== null
+                          ? ` · ${device.rapooBattery.voltage.toFixed(1)}V`
+                          : ''
+                    }`
+                  : '等待设备心跳…'}
+              </strong>
+            </div>
+            <div className="device-info-item">
               <span>VID / PID</span>
               <strong>
                 0x{device.descriptor.vendorId.toString(16).toUpperCase().padStart(4, '0')} / 0x
