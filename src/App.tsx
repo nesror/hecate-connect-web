@@ -478,8 +478,8 @@ export default function App() {
                 <span>
                   {device.phase === 'connected'
                     ? rapooDevice
-                      ? '按键、DPI、回报率与传感器设置会以“发送”方式写入 Rapoo 接收器；浏览器无法回读确认。宏与 Windows 系统设置仅保存在本地。'
-                      : '按键、DPI、回报率与传感器设置可写入鼠标；宏与 Windows 指针设置仍只保存在本地。'
+                      ? '按键、DPI、回报率与传感器设置会以“发送”方式写入 Rapoo 接收器；浏览器无法回读确认。宏仅保存在本地。'
+                      : '按键、DPI、回报率与传感器设置可写入鼠标；宏仍只保存在本地。'
                     : device.phase === 'error'
                       ? (device.error ?? '设备连接异常，点击查看诊断信息。')
                       : '未连接设备。设置会保存到本机浏览器；连接 HECATE G3M PRO 或 Rapoo VT9PRO 后可写入或发送按键、DPI 与性能配置。'}
@@ -636,7 +636,7 @@ export default function App() {
                     <strong>HECATE 兼容 JSON</strong>
                     <span className="tag-warn">实验性</span>
                   </div>
-                  <p>参考原生驱动数据结构生成，包含 59 键位、DPI 档位与系统设置。</p>
+                  <p>参考原生驱动数据结构生成，包含 59 键位与 DPI 档位。</p>
                 </div>
                 <button
                   type="button"
@@ -817,8 +817,8 @@ export default function App() {
               </p>
               <p>
                 Rapoo VT9PRO 通过 2.4G 接收器（VID 24AE）的 0xBA 输出报告发送配置。接收器不提供浏览器可读的
-                回读通道，因此 Rapoo 写入属于实验性功能，网页只会显示“已发送”，不会声称验证成功。宏与
-                Windows 指针设置仍只保存在本地。协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
+                回读通道，因此 Rapoo 写入属于实验性功能，网页只会显示“已发送”，不会声称验证成功。宏仍只保存在本地。
+                协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
               </p>
             </div>
           </div>

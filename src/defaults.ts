@@ -55,11 +55,6 @@ export function createDefaultPerformance(): PerformanceSettings {
     rippleCorrection: false,
     sensorHeight: 1,
     buttonDelay: 4,
-    pointerSpeed: 6,
-    enhancePrecision: false,
-    scrollSpeed: 3,
-    scrollFullPage: false,
-    doubleClickSpeed: 6,
   };
 }
 

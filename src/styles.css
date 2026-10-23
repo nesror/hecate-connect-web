@@ -1561,12 +1561,6 @@ svg {
   font-size: 8px;
 }
 
-.setting-divider {
-  height: 1px;
-  margin: 8px 0;
-  background: var(--line);
-}
-
 .setting-block {
   padding: 12px 0 3px;
 }
@@ -2936,15 +2930,6 @@ svg {
 
 .calibration-row .toggle {
   margin-top: 5px;
-}
-
-.slider-setting {
-  padding: 7px 0 3px;
-}
-
-.system-panel .slider-setting + .editor-switch-row,
-.system-panel .editor-switch-row + .setting-divider {
-  margin-top: 4px;
 }
 
 .runtime-panel {

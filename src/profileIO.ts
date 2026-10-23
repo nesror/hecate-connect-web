@@ -175,15 +175,6 @@ export function normalizeProfile(input: unknown, fallbackName = '配置文件'):
     buttonDelay: [4, 6, 8, 10, 12].includes(Number(rawPerf.buttonDelay))
       ? Number(rawPerf.buttonDelay)
       : defaultPerf.buttonDelay,
-    pointerSpeed: clamp(Number(rawPerf.pointerSpeed) || defaultPerf.pointerSpeed, 1, 11),
-    enhancePrecision:
-      typeof rawPerf.enhancePrecision === 'boolean'
-        ? rawPerf.enhancePrecision
-        : defaultPerf.enhancePrecision,
-    scrollSpeed: clamp(Number(rawPerf.scrollSpeed) || defaultPerf.scrollSpeed, 1, 3),
-    scrollFullPage:
-      typeof rawPerf.scrollFullPage === 'boolean' ? rawPerf.scrollFullPage : defaultPerf.scrollFullPage,
-    doubleClickSpeed: clamp(Number(rawPerf.doubleClickSpeed) || defaultPerf.doubleClickSpeed, 1, 11),
   };
 
   const macros = Array.isArray(input.macros)
@@ -299,13 +290,6 @@ export function createVendorConfig(profile: Profile) {
         ReportStages: {
           StageActive: rateToVendorIndex(profile.performance.pollingRate),
         },
-        SystemStages: {
-          DoubleClickTime: profile.performance.doubleClickSpeed,
-          MouseSpeed: profile.performance.pointerSpeed,
-          PointerPrecision: profile.performance.enhancePrecision ? 1 : 0,
-          ScorllPage: profile.performance.scrollFullPage ? 1 : 0,
-          WheelScorlllinse: profile.performance.scrollSpeed,
-        },
       },
     ],
     GameImagePath: '',
@@ -388,12 +372,6 @@ function profileFromVendor(data: Record<string, unknown>): ImportResult {
   profile.performance.sensorHeight = (sensorHeight + 1) as 1 | 2 | 3;
   const delay = Number(professional.delay_time);
   if ([4, 6, 8, 10, 12].includes(delay)) profile.performance.buttonDelay = delay;
-
-  const system = isRecord(device.SystemStages) ? device.SystemStages : {};
-  profile.performance.pointerSpeed = clamp(Number(system.MouseSpeed) || 6, 1, 11);
-  profile.performance.scrollSpeed = clamp(Number(system.WheelScorlllinse) || 3, 1, 3);
-  profile.performance.scrollFullPage = Number(system.ScorllPage) === 1;
-  profile.performance.doubleClickSpeed = clamp(Number(system.DoubleClickTime) || 6, 1, 11);
 
   const keyList = Array.isArray(device.KeyList) ? device.KeyList : [];
   let unknownKeys = 0;

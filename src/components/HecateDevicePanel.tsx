@@ -702,7 +702,7 @@ export function HecateDevicePanel({
         <div className="inline-note">
           <Info size={15} />
           协议来自对官方驱动的静态分析。可写入：6 个按键、DPI 档位与颜色、当前档位、回报率、LOD、去抖与直线/波纹修正。
-          宏与 Windows 指针/滚轮/双击速度仍只保存在浏览器或系统中，不会写入硬件。
+          宏仍只保存在浏览器中，不会写入硬件。
         </div>
       </div>
     </Modal>

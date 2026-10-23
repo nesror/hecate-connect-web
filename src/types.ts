@@ -65,11 +65,6 @@ export interface PerformanceSettings {
   rippleCorrection: boolean;
   sensorHeight: 1 | 2 | 3;
   buttonDelay: number;
-  pointerSpeed: number;
-  enhancePrecision: boolean;
-  scrollSpeed: number;
-  scrollFullPage: boolean;
-  doubleClickSpeed: number;
 }
 
 export interface MacroKeyAction {

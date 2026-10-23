@@ -13,7 +13,7 @@ import {
 import { useState } from 'react';
 import { DeviceWriteButton } from '../components/DeviceWriteButton';
 import { PageHeader } from '../components/PageHeader';
-import { Modal, Range, Segmented, Toggle } from '../components/ui';
+import { Modal, Segmented, Toggle } from '../components/ui';
 import { BUTTON_DELAY_OPTIONS, createDefaultPerformance, MODEL_INFO } from '../defaults';
 import { POLLING_OPTIONS } from '../functions';
 import type { MouseController } from '../hid/useMouseDevice';
@@ -27,12 +27,6 @@ interface PerformancePageProps {
   notify: (toast: Omit<ToastMessage, 'id'>) => void;
   onOpenDevice: () => void;
 }
-
-const SCROLL_OPTIONS = [
-  { value: 1, label: '1 行', caption: '精细' },
-  { value: 2, label: '2 行', caption: '标准' },
-  { value: 3, label: '3 行', caption: '快速' },
-];
 
 export function PerformancePage({
   profile,
@@ -62,8 +56,8 @@ export function PerformancePage({
         title="性能与校准"
         description={
           rapoo
-            ? '回报率、去抖、LOD 与直线/波纹修正可发送到 Rapoo 接收器；接收器无法回读，Windows 指针、滚轮与双击速度仍只保存在本机配置。'
-            : '回报率、去抖、LOD 与直线/波纹修正可直接写入鼠标；Windows 指针、滚轮与双击速度属于系统设置，仅保存在本机配置。'
+            ? '回报率、去抖、LOD 与直线/波纹修正可发送到 Rapoo 接收器；接收器无法回读，发送后无法确认是否生效。'
+            : '回报率、去抖、LOD 与直线/波纹修正可直接写入鼠标，写入完成后会自动回读核对。'
         }
         actions={
           <>
@@ -261,156 +255,52 @@ export function PerformancePage({
         </section>
       </div>
 
-      <div className="performance-grid">
-        <section className="panel calibration-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="section-kicker">SENSOR TUNING</span>
-              <h2>传感器校准</h2>
-            </div>
-            <span className="panel-note">默认全部关闭</span>
+      <section className="panel calibration-panel">
+        <div className="panel-heading">
+          <div>
+            <span className="section-kicker">SENSOR TUNING</span>
+            <h2>传感器校准</h2>
           </div>
+          <span className="panel-note">默认全部关闭</span>
+        </div>
 
-          <div className="calibration-list">
-            <div className="calibration-row">
-              <span className="calibration-icon">
-                <Activity size={17} />
-              </span>
-              <div className="calibration-copy">
-                <strong>直线修正</strong>
-                <span>将接近水平的移动拉直为水平线，适合办公，不建议 FPS 使用。</span>
-              </div>
-              <Toggle
-                checked={performance.lineCorrection}
-                onChange={(next) => update({ lineCorrection: next })}
-                label="直线修正"
-              />
-            </div>
-            <div className="calibration-row">
-              <span className="calibration-icon">
-                <MousePointer2 size={17} />
-              </span>
-              <div className="calibration-copy">
-                <strong>波纹修正</strong>
-                <span>平滑低速移动中的细小抖动，会略微增加输入延迟。</span>
-              </div>
-              <Toggle
-                checked={performance.rippleCorrection}
-                onChange={(next) => update({ rippleCorrection: next })}
-                label="波纹修正"
-              />
-            </div>
-          </div>
-
-          <div className="inline-note">
-            {rapoo
-              ? '保持两项关闭可以获得最原始的传感器输入。Rapoo 的传感器角度与玻璃模式未纳入本工具，不会发送。'
-              : '保持两项关闭可以获得最原始的传感器输入。官方驱动的配置写入中角度捕捉始终为关闭，固件不提供该开关。'}
-          </div>
-        </section>
-
-        <section className="panel system-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="section-kicker">WINDOWS POINTER</span>
-              <h2>指针与滚轮</h2>
-            </div>
-            <span className="panel-note">Windows 系统设置</span>
-          </div>
-
-          <div className="inline-note">
-            <Info size={14} />
-            指针速度、滚轮行数与双击速度由 Windows 控制，网页无法写入鼠标固件，也不会自动修改系统设置；这些值仅随配置保存。
-          </div>
-
-          <div className="slider-setting">
-            <div className="control-label-row">
-              <span>指针移动速度</span>
-              <div className="inline-value">
-                <strong>{performance.pointerSpeed}</strong>
-                <small>/ 11</small>
-              </div>
-            </div>
-            <Range
-              min={1}
-              max={11}
-              value={performance.pointerSpeed}
-              onChange={(value) => update({ pointerSpeed: value })}
-              label="指针移动速度"
-              ariaValueText={`第 ${performance.pointerSpeed} 档`}
-            />
-            <div className="range-scale">
-              <span>慢</span>
-              <span>Windows 默认 6</span>
-              <span>快</span>
-            </div>
-          </div>
-
-          <div className="editor-switch-row">
-            <div>
-              <strong>提高指针精确度</strong>
-              <span>开启 Windows 指针加速，会改变手感一致性</span>
+        <div className="calibration-list">
+          <div className="calibration-row">
+            <span className="calibration-icon">
+              <Activity size={17} />
+            </span>
+            <div className="calibration-copy">
+              <strong>直线修正</strong>
+              <span>将接近水平的移动拉直为水平线，适合办公，不建议 FPS 使用。</span>
             </div>
             <Toggle
-              checked={performance.enhancePrecision}
-              onChange={(next) => update({ enhancePrecision: next })}
-              label="提高指针精确度"
+              checked={performance.lineCorrection}
+              onChange={(next) => update({ lineCorrection: next })}
+              label="直线修正"
             />
           </div>
-
-          <div className="setting-divider" />
-
-          <div className="setting-block is-compact">
-            <div className="control-label-row">
-              <span>垂直滚动行数</span>
-              <small>每格滚轮</small>
-            </div>
-            <Segmented
-              compact
-              options={SCROLL_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-                caption: option.caption,
-              }))}
-              value={performance.scrollSpeed}
-              onChange={(value) => update({ scrollSpeed: Number(value) })}
-              label="垂直滚动行数"
-            />
-          </div>
-
-          <div className="editor-switch-row">
-            <div>
-              <strong>一次滚动一屏</strong>
-              <span>忽略上面的行数设置，每格滚动整页</span>
+          <div className="calibration-row">
+            <span className="calibration-icon">
+              <MousePointer2 size={17} />
+            </span>
+            <div className="calibration-copy">
+              <strong>波纹修正</strong>
+              <span>平滑低速移动中的细小抖动，会略微增加输入延迟。</span>
             </div>
             <Toggle
-              checked={performance.scrollFullPage}
-              onChange={(next) => update({ scrollFullPage: next })}
-              label="一次滚动一屏"
+              checked={performance.rippleCorrection}
+              onChange={(next) => update({ rippleCorrection: next })}
+              label="波纹修正"
             />
           </div>
+        </div>
 
-          <div className="setting-divider" />
-
-          <div className="slider-setting">
-            <div className="control-label-row">
-              <span>双击速度</span>
-              <div className="inline-value">
-                <strong>{performance.doubleClickSpeed}</strong>
-                <small>/ 11</small>
-              </div>
-            </div>
-            <Range
-              min={1}
-              max={11}
-              value={performance.doubleClickSpeed}
-              onChange={(value) => update({ doubleClickSpeed: value })}
-              label="双击速度"
-              ariaValueText={`第 ${performance.doubleClickSpeed} 档`}
-            />
-          </div>
-        </section>
-      </div>
+        <div className="inline-note">
+          {rapoo
+            ? '保持两项关闭可以获得最原始的传感器输入。Rapoo 的传感器角度与玻璃模式未纳入本工具，不会发送。'
+            : '保持两项关闭可以获得最原始的传感器输入。官方驱动的配置写入中角度捕捉始终为关闭，固件不提供该开关。'}
+        </div>
+      </section>
 
       <section className="panel runtime-panel">
         <div className="runtime-copy">
@@ -418,8 +308,8 @@ export function PerformancePage({
           <h2>硬件操作范围</h2>
           <p>
             {rapoo
-              ? '连接接收器后，可把回报率、去抖、LOD 与直线/波纹修正发送到 Rapoo；接收器不支持回读，发送后无法确认是否生效。Windows 指针、滚轮与双击速度仍由系统管理。'
-              : '连接鼠标后，可把回报率、去抖、LOD 与直线/波纹修正写入板载配置，并即时应用回报率；写入完成后会自动回读核对。Windows 指针、滚轮与双击速度仍由系统管理。'}
+              ? '连接接收器后，可把回报率、去抖、LOD 与直线/波纹修正发送到 Rapoo；接收器不支持回读，发送后无法确认是否生效。'
+              : '连接鼠标后，可把回报率、去抖、LOD 与直线/波纹修正写入板载配置，并即时应用回报率；写入完成后会自动回读核对。'}
           </p>
         </div>
         <div className="runtime-list">
@@ -440,11 +330,6 @@ export function PerformancePage({
           </div>
           <div className="runtime-item">
             <Info size={15} />
-            <span>Windows 指针与滚轮</span>
-            <strong>系统设置</strong>
-          </div>
-          <div className="runtime-item">
-            <Info size={15} />
             <span>实时回报率测试</span>
             <strong>未实现</strong>
           </div>
@@ -455,7 +340,7 @@ export function PerformancePage({
         open={resetOpen}
         onClose={() => setResetOpen(false)}
         title="恢复默认性能设置？"
-        description="回报率、传感器校准、去抖延时与指针设置将恢复为出厂默认值。"
+        description="回报率、传感器校准与去抖延时将恢复为出厂默认值。"
         size="compact"
         footer={
           <>
