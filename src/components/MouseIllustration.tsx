@@ -1,14 +1,12 @@
 import { type KeyboardEvent, useId } from 'react';
 import type { ButtonId } from '../types';
 import { BUTTON_META, BUTTON_ORDER } from '../functions';
-import { cx, hexToRgba } from '../utils';
+import { cx } from '../utils';
 
 interface MouseIllustrationProps {
   selected?: ButtonId | null;
   onSelect?: (button: ButtonId) => void;
-  glowColor?: string;
-  glow?: boolean;
-  indicatorEffect?: 'solid' | 'breath';
+  device?: 'hecate' | 'rapoo';
   className?: string;
   showBadges?: boolean;
 }
@@ -58,9 +56,7 @@ const BADGE_POSITIONS: Record<ButtonId, { x: number; y: number }> = {
 export function MouseIllustration({
   selected,
   onSelect,
-  glowColor = '#2ee6c5',
-  glow = false,
-  indicatorEffect = 'solid',
+  device = 'hecate',
   className,
   showBadges = true,
 }: MouseIllustrationProps) {
@@ -74,7 +70,6 @@ export function MouseIllustration({
   const stripGradient = `${id}-strip`;
   const wheelGradient = `${id}-wheel`;
   const dpiGradient = `${id}-dpi`;
-  const ledGlow = `${id}-led-glow`;
   const tread = `${id}-tread`;
   const blur = `${id}-blur`;
   const bodyClip = `${id}-clip`;
@@ -107,9 +102,9 @@ export function MouseIllustration({
   return (
     <svg
       viewBox="0 0 360 570"
-      className={cx('mouse-illustration', className)}
+      className={cx('mouse-illustration', device === 'rapoo' && 'is-rapoo', className)}
       role="img"
-      aria-label="HECATE G3M Pro 鼠标按键示意图"
+      aria-label={device === 'rapoo' ? 'Rapoo VT9PRO 鼠标按键示意图' : 'HECATE G3M PRO 鼠标按键示意图'}
     >
       <defs>
         <linearGradient id={bodyGradient} x1="0.15" y1="0" x2="0.85" y2="1">
@@ -159,11 +154,6 @@ export function MouseIllustration({
             strokeWidth="1.1"
           />
         </pattern>
-        <radialGradient id={ledGlow} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={glowColor} stopOpacity="0.5" />
-          <stop offset="55%" stopColor={glowColor} stopOpacity="0.11" />
-          <stop offset="100%" stopColor={glowColor} stopOpacity="0" />
-        </radialGradient>
         <filter id={blur} x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="9" />
         </filter>
@@ -199,9 +189,6 @@ export function MouseIllustration({
           stroke="rgba(0, 0, 0, 0.4)"
           strokeWidth="12"
         />
-        {glow && (
-          <ellipse cx="180" cy="292" rx="58" ry="42" fill={`url(#${ledGlow})`} opacity="0.45" />
-        )}
       </g>
 
       <g
@@ -267,7 +254,7 @@ export function MouseIllustration({
         fontWeight="600"
         letterSpacing="2.6"
       >
-        HECATE
+        {device === 'rapoo' ? 'RAPOO' : 'HECATE'}
       </text>
 
       <path
@@ -359,10 +346,9 @@ export function MouseIllustration({
           strokeWidth="1.2"
           strokeLinecap="round"
         />
-        <g className={cx('dpi-led', glow && indicatorEffect === 'breath' && 'is-breathing')}>
-          {glow && <circle cx="180" cy="280" r="15" fill={`url(#${ledGlow})`} />}
+        <g className="dpi-led">
           <circle cx="180" cy="280" r="3" fill="#0a0d0e" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="0.8" />
-          <circle cx="180" cy="280" r="1.8" fill={glow ? glowColor : '#334345'} />
+          <circle cx="180" cy="280" r="1.8" fill="#334345" />
         </g>
         <rect
           x="160"
@@ -424,19 +410,45 @@ export function MouseIllustration({
         <path d={BACK_BUTTON} className="zone-surface" />
       </g>
 
-      <g className="mouse-logo" transform="translate(149 399) scale(1.3)">
-        <g fill="none" stroke="rgba(212, 232, 227, 0.72)" strokeWidth="2.6" strokeLinecap="round">
-          <path d="M24 4.5a19.5 19.5 0 0 1 16.9 9.8" />
-          <path d="M44.2 24a19.5 19.5 0 0 1-9.8 16.9" />
-          <path d="M24 43.5a19.5 19.5 0 0 1-16.9-9.8" />
-          <path d="M3.8 24a19.5 19.5 0 0 1 9.8-16.9" />
+      {device === 'rapoo' ? (
+        <g className="mouse-wordmark" transform="translate(180 426)">
+          <text
+            textAnchor="middle"
+            fill="rgba(212, 232, 227, 0.68)"
+            fontFamily="'Segoe UI', 'Inter', system-ui, sans-serif"
+            fontSize="17"
+            fontWeight="700"
+            letterSpacing="4.6"
+          >
+            RAPOO
+          </text>
+          <text
+            y="16"
+            textAnchor="middle"
+            fill="rgba(150, 180, 176, 0.52)"
+            fontFamily="'Segoe UI', 'Inter', system-ui, sans-serif"
+            fontSize="7.5"
+            fontWeight="600"
+            letterSpacing="2.6"
+          >
+            VT9PRO
+          </text>
         </g>
-        <g fill="none" stroke="rgba(236, 248, 245, 0.9)" strokeWidth="3" strokeLinecap="round">
-          <path d="M17.5 16.5v15" />
-          <path d="M30.5 16.5v15" />
-          <path d="M17.5 24h13" />
+      ) : (
+        <g className="mouse-logo" transform="translate(149 399) scale(1.3)">
+          <g fill="none" stroke="rgba(212, 232, 227, 0.72)" strokeWidth="2.6" strokeLinecap="round">
+            <path d="M24 4.5a19.5 19.5 0 0 1 16.9 9.8" />
+            <path d="M44.2 24a19.5 19.5 0 0 1-9.8 16.9" />
+            <path d="M24 43.5a19.5 19.5 0 0 1-16.9-9.8" />
+            <path d="M3.8 24a19.5 19.5 0 0 1 9.8-16.9" />
+          </g>
+          <g fill="none" stroke="rgba(236, 248, 245, 0.9)" strokeWidth="3" strokeLinecap="round">
+            <path d="M17.5 16.5v15" />
+            <path d="M30.5 16.5v15" />
+            <path d="M17.5 24h13" />
+          </g>
         </g>
-      </g>
+      )}
 
       {showBadges && (
         <g className="mouse-badges" aria-hidden="true">

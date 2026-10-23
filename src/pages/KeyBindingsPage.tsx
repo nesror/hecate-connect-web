@@ -30,10 +30,12 @@ import {
   type FunctionCategoryId,
 } from '../functions';
 import type { Binding, ButtonId, Profile } from '../types';
+import type { MouseController } from '../hid/useMouseDevice';
 import { cx } from '../utils';
 
 interface KeyBindingsPageProps {
   profile: Profile;
+  device: MouseController;
   onBind: (button: ButtonId, binding: Binding) => void;
   onReset: () => void;
   onNavigateMacros: () => void;
@@ -56,10 +58,12 @@ function categoryForBinding(binding: Binding): FunctionCategoryId {
 
 export function KeyBindingsPage({
   profile,
+  device,
   onBind,
   onReset,
   onNavigateMacros,
 }: KeyBindingsPageProps) {
+  const rapoo = device.family === 'rapoo';
   const [selectedButton, setSelectedButton] = useState<ButtonId>('left');
   const [category, setCategory] = useState<FunctionCategoryId>('mouse');
   const [search, setSearch] = useState('');
@@ -125,9 +129,13 @@ export function KeyBindingsPage({
   return (
     <div className="page key-page">
       <PageHeader
-        kicker="BUTTON REMAP · G3M PRO"
+        kicker="BUTTON REMAP · 6 KEYS"
         title="按键设定"
-        description="点击鼠标示意图上的编号，将 6 个物理按键映射为鼠标、键盘、宏或系统功能。"
+        description={
+          rapoo
+            ? '点击鼠标示意图上的编号，为 Rapoo VT9PRO 的 6 个物理按键分配功能。接收器只发送鼠标、键盘、多媒体与 DPI 循环动作；宏与未确认功能仅保存在本机。'
+            : '点击鼠标示意图上的编号，将 6 个物理按键映射为鼠标、键盘、宏或系统功能。'
+        }
         actions={
           <button type="button" className="ghost-button" onClick={() => setResetOpen(true)}>
             <RotateCcw size={16} />
@@ -141,14 +149,18 @@ export function KeyBindingsPage({
           <div className="panel-heading">
             <div>
               <span className="section-kicker">DEVICE MAP</span>
-              <h2>鼠标按键</h2>
+              <h2>{device.model.shortName} 按键</h2>
             </div>
             <span className="panel-note">点击编号选择按键</span>
           </div>
 
           <div className="mouse-stage">
             <div className="mouse-halo" />
-            <MouseIllustration selected={selectedButton} onSelect={selectButton} />
+            <MouseIllustration
+              device={rapoo ? 'rapoo' : 'hecate'}
+              selected={selectedButton}
+              onSelect={selectButton}
+            />
           </div>
 
           <div className="key-legend">
@@ -371,7 +383,9 @@ export function KeyBindingsPage({
               6 个按键均可改键，仅左键不能设为禁用。
               <span className="muted">
                 {' '}
-                键盘、多媒体与系统功能会在连接鼠标后写入板载配置；宏目前仅保存在浏览器。
+                {rapoo
+                  ? '接收器会发送鼠标、键盘、多媒体与 DPI 循环动作；宏、系统与 DPI +/− 动作不会写入，仅保存在本机配置中。'
+                  : '键盘、多媒体与系统功能会在连接 HECATE 后写入板载配置；宏仅保存在本机配置中，不会写入设备。'}
               </span>
             </span>
           </div>

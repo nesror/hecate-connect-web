@@ -1,6 +1,8 @@
 import { bindingFromVendorCode, vendorCodeForBinding } from '../functions';
 import type { Binding, ButtonId } from '../types';
 
+export const HECATE_VENDOR_ID = 0x320f;
+export const HECATE_PRODUCT_ID = 0x706b;
 export const REPORT_ID = 4;
 export const REPORT_DATA_LENGTH = 63;
 export const CHUNK_SIZE = 56;

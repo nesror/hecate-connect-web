@@ -1,12 +1,12 @@
 import { RefreshCw, Usb, Zap } from 'lucide-react';
 import { useState } from 'react';
-import type { HecateController } from '../hid/useHecateDevice';
 import type { WriteSections } from '../hid/HecateHid';
+import type { MouseController } from '../hid/useMouseDevice';
 import type { Profile, ToastMessage } from '../types';
 import { Modal } from './ui';
 
 interface DeviceWriteButtonProps {
-  device: HecateController;
+  device: MouseController;
   profile: Profile;
   sections: WriteSections;
   title: string;
@@ -28,13 +28,14 @@ export function DeviceWriteButton({
   const [writing, setWriting] = useState(false);
   const connected = device.phase === 'connected';
   const busy = writing || device.busy;
+  const rapoo = device.family === 'rapoo';
 
   const handleOpen = () => {
     if (!connected) {
       notify({
         tone: 'info',
         title: '尚未连接鼠标',
-        detail: '请先在设备面板中连接 G3M PRO，再写入硬件配置。',
+        detail: '请先在设备面板中连接 HECATE G3M PRO 或 Rapoo VT9PRO，再写入或发送硬件配置。',
       });
       onOpenDevice();
       return;
@@ -47,6 +48,23 @@ export function DeviceWriteButton({
     setWriting(true);
     try {
       const result = await device.writeProfile(profile, sections);
+
+      if (result.family === 'rapoo') {
+        const skipped = result.rapoo.buttons.filter((item) => !item.written).length;
+        notify({
+          tone: 'info',
+          title: result.frames > 0 ? '配置已发送（未验证）' : '没有可发送的项',
+          detail:
+            result.frames > 0
+              ? `已向 Rapoo 接收器发送 ${result.frames} 个配置帧；浏览器无法回读确认是否生效。${
+                  skipped > 0 ? ` ${skipped} 个按键保留设备原值。` : ''
+                }`
+              : result.warnings[0] ?? '当前设置没有可通过 Rapoo 协议发送的项。',
+        });
+        setConfirmOpen(false);
+        return;
+      }
+
       const verified = result.verified === true;
       notify({
         tone: verified ? 'success' : 'info',
@@ -75,13 +93,13 @@ export function DeviceWriteButton({
     <>
       <button type="button" className="outline-button" disabled={busy} onClick={handleOpen}>
         {connected ? <Zap size={16} /> : <Usb size={16} />}
-        {connected ? '写入鼠标' : '连接鼠标以写入'}
+        {connected ? (rapoo ? '发送到接收器' : '写入鼠标') : '连接鼠标以写入'}
       </button>
 
       <Modal
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title={`写入 ${title} 到鼠标？`}
+        title={`${rapoo ? '发送' : '写入'} ${title} 到鼠标？`}
         description={description}
         size="compact"
         footer={
@@ -101,14 +119,16 @@ export function DeviceWriteButton({
               onClick={() => void handleWrite()}
             >
               {busy ? <RefreshCw size={15} className="is-spinning" /> : <Zap size={15} />}
-              {busy ? '正在写入…' : '确认写入'}
+              {busy ? (rapoo ? '正在发送…' : '正在写入…') : rapoo ? '确认发送' : '确认写入'}
             </button>
           </>
         }
       >
-        <div className="inline-note">
+        <div className={rapoo ? 'inline-note is-warning' : 'inline-note'}>
           <Usb size={15} />
-          写入期间请勿拔下鼠标。完成后会自动重新读取设备，核对配置块中的目标字节与回报率。
+          {rapoo
+            ? '发送期间请勿拔出 Rapoo 接收器。接收器不支持配置回读，完成后无法在浏览器中验证是否生效。'
+            : '写入期间请勿拔下鼠标。完成后会自动重新读取设备，核对配置块中的目标字节与回报率。'}
         </div>
       </Modal>
     </>

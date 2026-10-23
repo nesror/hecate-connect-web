@@ -281,6 +281,14 @@ export function keyLabel(code: string): string {
   return code;
 }
 
+export function keyboardHardwareUsage(
+  code: string,
+): { usage?: number; modifier?: number } | null {
+  const option = KEYBOARD_INDEX.get(code);
+  if (!option) return null;
+  return { usage: option.usage, modifier: option.modifier };
+}
+
 function keyboardVendorCode(option: KeyboardOption): number {
   if (option.modifier !== undefined) return 0x200000 | option.modifier;
   return 0x200000 | (option.usage ?? 0);

@@ -379,9 +379,9 @@ export function MacrosPage({
   return (
     <div className="page macros-page">
       <PageHeader
-        kicker="MACRO ENGINE · LOCAL"
+        kicker="MACRO ENGINE · LOCAL ONLY"
         title="宏管理"
-        description="录制键盘序列、插入鼠标点击与延迟，并将宏指派给 6 个可编程按键。宏随配置文件保存在浏览器中。"
+        description="录制键盘序列、插入鼠标点击与延迟，并将宏指派给 6 个可编程按键。宏只随配置文件保存在浏览器中，不会写入鼠标固件，也不会在系统层自动执行。"
         actions={
           <button type="button" className="primary-button" onClick={addMacro}>
             <Plus size={16} />
@@ -465,7 +465,7 @@ export function MacrosPage({
 
           <div className="macro-library-tip">
             <Info size={14} />
-            <span>网页版备份会包含宏；HECATE 兼容 JSON 暂不写入宏数据。</span>
+            <span>网页版备份会包含宏；HECATE 兼容 JSON 与硬件写入均不包含宏。</span>
           </div>
         </section>
 
@@ -675,7 +675,7 @@ export function MacrosPage({
 
               <div className="macro-editor-footer">
                 <Info size={13} />
-                <span>按下已绑定的鼠标按键即可执行宏；网页版无法在本机模拟执行。</span>
+                <span>宏仅保存在本机配置中；网页版既不会写入鼠标固件，也无法在系统层执行宏。</span>
               </div>
             </>
           ) : (

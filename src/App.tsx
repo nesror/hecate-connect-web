@@ -25,10 +25,9 @@ import {
   defaultBindingFor,
 } from './functions';
 import type { DeviceSettings } from './hid/profileCodec';
-import { useHecateDevice } from './hid/useHecateDevice';
+import { useMouseDevice } from './hid/useMouseDevice';
 import { DpiPage } from './pages/DpiPage';
 import { KeyBindingsPage } from './pages/KeyBindingsPage';
-import { LightingPage } from './pages/LightingPage';
 import { MacrosPage } from './pages/MacrosPage';
 import { PerformancePage } from './pages/PerformancePage';
 import {
@@ -61,7 +60,6 @@ const PAGE_TITLES: Record<PageId, string> = {
   keys: '按键设定',
   dpi: 'DPI 设置',
   performance: '性能与校准',
-  lighting: '灯效',
   macros: '宏管理',
 };
 
@@ -95,8 +93,9 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const device = useHecateDevice();
+  const device = useMouseDevice();
   const [deviceOpen, setDeviceOpen] = useState(false);
+  const rapooDevice = device.family === 'rapoo';
 
   const [aboutOpen, setAboutOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<Profile | null>(null);
@@ -380,6 +379,7 @@ export default function App() {
         return (
           <KeyBindingsPage
             profile={activeProfile}
+            device={device}
             onBind={bindButton}
             onReset={resetBindings}
             onNavigateMacros={() => setPage('macros')}
@@ -390,7 +390,6 @@ export default function App() {
           <DpiPage
             profile={activeProfile}
             onChange={updateDpi}
-            onNavigateLighting={() => setPage('lighting')}
             device={device}
             notify={pushToast}
             onOpenDevice={() => setDeviceOpen(true)}
@@ -404,14 +403,6 @@ export default function App() {
             device={device}
             notify={pushToast}
             onOpenDevice={() => setDeviceOpen(true)}
-          />
-        );
-      case 'lighting':
-        return (
-          <LightingPage
-            profile={activeProfile}
-            onChange={updateDpi}
-            onNavigateDpi={() => setPage('dpi')}
           />
         );
       case 'macros':
@@ -442,6 +433,7 @@ export default function App() {
         onDeleteProfile={setDeleteTarget}
         onExportProfile={openExport}
         devicePhase={device.phase}
+        model={device.model}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -451,6 +443,7 @@ export default function App() {
           savedAt={saving ? null : savedAt}
           devicePhase={device.phase}
           deviceBusy={device.busy}
+          deviceName={device.family ? device.model.shortName : '鼠标'}
           onOpenDevice={() => setDeviceOpen(true)}
           onMenu={() => setSidebarOpen(true)}
           onExport={() => openExport(activeProfile)}
@@ -477,21 +470,23 @@ export default function App() {
                   {device.phase === 'connected'
                     ? device.busy
                       ? '硬件通信中'
-                      : '硬件已连接'
+                      : `已连接 ${device.model.shortName}`
                     : device.phase === 'error'
                       ? '设备连接异常'
                       : '离线配置模式'}
                 </strong>
                 <span>
                   {device.phase === 'connected'
-                    ? '按键、DPI、回报率与传感器设置可写入鼠标；宏、灯效亮度/模式与 Windows 指针设置仍只保存在本地。'
+                    ? rapooDevice
+                      ? '按键、DPI、回报率与传感器设置会以“发送”方式写入 Rapoo 接收器；浏览器无法回读确认。宏与 Windows 系统设置仅保存在本地。'
+                      : '按键、DPI、回报率与传感器设置可写入鼠标；宏与 Windows 指针设置仍只保存在本地。'
                     : device.phase === 'error'
                       ? (device.error ?? '设备连接异常，点击查看诊断信息。')
-                      : '未连接 G3M PRO。设置会保存到本机浏览器；连接后可写入按键、DPI 与性能配置。'}
+                      : '未连接设备。设置会保存到本机浏览器；连接 HECATE G3M PRO 或 Rapoo VT9PRO 后可写入或发送按键、DPI 与性能配置。'}
                 </span>
               </div>
               <button type="button" onClick={() => setDeviceOpen(true)}>
-                {device.phase === 'connected' ? '设备详情' : '连接鼠标'}
+                {device.phase === 'connected' ? '设备详情' : '连接设备'}
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -501,7 +496,7 @@ export default function App() {
             </div>
 
             <footer className="content-footer">
-              <span>HECATE G3M PRO · 网页配置工具</span>
+              <span>G3M PRO / VT9PRO · 网页配置工具</span>
               <span>非官方项目 · 数据默认仅存储于本机</span>
             </footer>
           </div>
@@ -561,7 +556,7 @@ export default function App() {
         title="删除配置文件？"
         description={
           deleteTarget
-            ? `「${deleteTarget.name}」中的按键、DPI、性能、灯效与宏设置将被永久删除。此操作无法撤销。`
+            ? `「${deleteTarget.name}」中的按键、DPI、性能与宏设置将被永久删除。此操作无法撤销。`
             : undefined
         }
         size="compact"
@@ -641,7 +636,7 @@ export default function App() {
                     <strong>HECATE 兼容 JSON</strong>
                     <span className="tag-warn">实验性</span>
                   </div>
-                  <p>参考原生驱动数据结构生成，包含 59 键位、DPI 档位、灯光与系统设置。</p>
+                  <p>参考原生驱动数据结构生成，包含 59 键位、DPI 档位与系统设置。</p>
                 </div>
                 <button
                   type="button"
@@ -806,9 +801,9 @@ export default function App() {
             <div>
               <span className="section-kicker">UNOFFICIAL WEB CONFIG</span>
               <h2>HECATE Connect · Web</h2>
-              <p>为 HECATE G3M PRO 制作的浏览器配置界面，复刻桌面驱动的交互与视觉语言。</p>
+              <p>为 HECATE G3M PRO 与 Rapoo VT9PRO 制作的浏览器配置界面，复刻桌面驱动的交互与视觉语言。</p>
             </div>
-            <span className="about-version">v1.4</span>
+            <span className="about-version">v1.5</span>
           </div>
 
           <div className="about-callout">
@@ -816,10 +811,14 @@ export default function App() {
             <div>
               <strong>WebHID 硬件连接（实验性）</strong>
               <p>
-                使用桌面版 Chrome 或 Edge 连接鼠标后，网页可以读取并写入 6 个按键映射（含滚轮后方的 DPI 键）、
-                7 档 DPI 与档位颜色、当前档位、回报率、LOD、去抖与直线/波纹修正。握手、读取、写入与回读已在
-                G3M PRO（VID 320F / PID 706B）上验证。宏、灯效亮度/模式、Windows 指针与滚轮设置仍只保存在本地。
-                协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
+                使用桌面版 Chrome 或 Edge 连接鼠标后，网页可以读取并写入 HECATE G3M PRO 的 6 个按键映射
+                （含滚轮后方的 DPI 键）、7 档 DPI 与档位颜色、当前档位、回报率、LOD、去抖与直线/波纹修正。
+                握手、读取、写入与回读已在 G3M PRO（VID 320F / PID 706B）上验证。
+              </p>
+              <p>
+                Rapoo VT9PRO 通过 2.4G 接收器（VID 24AE）的 0xBA 输出报告发送配置。接收器不提供浏览器可读的
+                回读通道，因此 Rapoo 写入属于实验性功能，网页只会显示“已发送”，不会声称验证成功。宏与
+                Windows 指针设置仍只保存在本地。协议来自对官方驱动的静态分析，尚未在所有固件版本上验证。
               </p>
             </div>
           </div>
@@ -829,7 +828,7 @@ export default function App() {
               <span><ShieldCheck size={17} /></span>
               <div>
                 <strong>数据默认留在本机</strong>
-                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。只有你在设备面板或页面写入按钮中确认后，配置才会写入鼠标硬件。</p>
+                <p>使用 localStorage 自动保存，不连接服务器、不上传配置。只有你在设备面板或页面写入按钮中确认后，配置才会写入鼠标硬件或发送到接收器。</p>
               </div>
             </div>
             <div className="about-item">
@@ -851,15 +850,16 @@ export default function App() {
               <div>
                 <strong>关于本工具</strong>
                 <p>
-                  非官方项目，与 HECATE、漫步者无隶属关系。机型基准为 {MODEL_INFO.sensor} · {MODEL_INFO.maxDpi} ·{' '}
-                  {MODEL_INFO.polling}。
+                  非官方项目，与 HECATE、漫步者、Rapoo、雷柏均无隶属关系。HECATE 机型基准为{' '}
+                  {MODEL_INFO.sensor} · {MODEL_INFO.maxDpi} · {MODEL_INFO.polling}；Rapoo 支持为实验性，
+                  无法回读验证。
                 </p>
               </div>
             </div>
           </div>
 
           <div className="about-footer">
-            <span>建议浏览器：Chrome / Edge 最新版</span>
+            <span>支持 HECATE G3M PRO / Rapoo VT9PRO</span>
             <span>配置存储键：hecate-connect-web:state:v1</span>
           </div>
         </div>

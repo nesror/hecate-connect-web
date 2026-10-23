@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   Crosshair,
   Layers3,
   RotateCcw,
@@ -17,15 +16,14 @@ import {
   MAX_DPI,
   MIN_DPI,
 } from '../defaults';
-import type { HecateController } from '../hid/useHecateDevice';
+import type { MouseController } from '../hid/useMouseDevice';
 import type { DpiSettings, DpiStage, Profile, ToastMessage } from '../types';
 import { clamp, cx, hexToRgba } from '../utils';
 
 interface DpiPageProps {
   profile: Profile;
   onChange: (dpi: DpiSettings) => void;
-  onNavigateLighting: () => void;
-  device: HecateController;
+  device: MouseController;
   notify: (toast: Omit<ToastMessage, 'id'>) => void;
   onOpenDevice: () => void;
 }
@@ -290,7 +288,6 @@ function DpiChart({
 export function DpiPage({
   profile,
   onChange,
-  onNavigateLighting,
   device,
   notify,
   onOpenDevice,
@@ -305,6 +302,7 @@ export function DpiPage({
   const enabledCount = dpi.stages.filter((item) => item.enabled).length;
   const maxEnabled = Math.max(...dpi.stages.filter((item) => item.enabled).map((item) => item.dpiX), MIN_DPI);
   const isCurrentStage = selectedStage === dpi.activeStage;
+  const rapoo = device.family === 'rapoo';
 
   const updateStage = (index: number, patch: Partial<DpiStage>) => {
     onChange({
@@ -363,15 +361,23 @@ export function DpiPage({
       <PageHeader
         kicker="SENSITIVITY · PAW3395"
         title="DPI 设置"
-        description="配置 7 个 DPI 档位、X/Y 灵敏度与档位颜色。滚轮后方的 DPI 按键会在这些档位之间循环，连接鼠标后可将档位与颜色写入板载配置。"
+        description={
+          rapoo
+            ? '配置 7 个 DPI 档位与 X/Y 灵敏度。Rapoo 接收器只发送已启用档位的 DPI 数值与当前档位；档位颜色仅保存在本机。'
+            : '配置 7 个 DPI 档位、X/Y 灵敏度与档位颜色。滚轮后方的 DPI 按键会在这些档位之间循环，连接鼠标后可将档位与颜色写入板载配置。'
+        }
         actions={
           <>
             <DeviceWriteButton
               device={device}
               profile={profile}
               sections={{ bindings: false, dpi: true, performance: false }}
-              title="DPI 与档位颜色"
-              description="将 7 个 DPI 档位、X/Y 灵敏度、当前档位与档位颜色写入鼠标板载配置。指示灯亮度与呼吸模式仍只保存在浏览器。"
+              title={rapoo ? 'DPI 档位' : 'DPI 与档位颜色'}
+              description={
+                rapoo
+                  ? '将已启用的 DPI 档位、X/Y 灵敏度与当前档位发送到 Rapoo 接收器。接收器无法回读确认。'
+                  : '将 7 个 DPI 档位、X/Y 灵敏度、当前档位与档位颜色写入鼠标板载配置。'
+              }
               onOpenDevice={onOpenDevice}
               notify={notify}
             />
@@ -428,7 +434,7 @@ export function DpiPage({
             <Zap size={18} />
           </div>
           <div>
-            <span>USB 回报率</span>
+            <span>当前回报率</span>
             <strong>
               {profile.performance.pollingRate.toLocaleString('en-US')}
               <small> Hz</small>
@@ -523,34 +529,36 @@ export function DpiPage({
             </div>
           )}
 
-          <div className="color-control">
-            <div className="control-label-row">
-              <span>档位颜色</span>
-              <small>同时作为 DPI 指示灯颜色</small>
+          {!rapoo && (
+            <div className="color-control">
+              <div className="control-label-row">
+                <span>档位颜色</span>
+                <small>作为 HECATE 的 DPI 指示灯颜色写入鼠标</small>
+              </div>
+              <div className="color-swatches">
+                {DPI_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={cx('color-swatch', stage.color.toLowerCase() === color.toLowerCase() && 'is-active')}
+                    style={{ background: color }}
+                    aria-label={`使用颜色 ${color}`}
+                    aria-pressed={stage.color.toLowerCase() === color.toLowerCase()}
+                    onClick={() => updateStage(selectedStage, { color })}
+                  />
+                ))}
+                <label className="custom-color" title="自定义颜色">
+                  <input
+                    type="color"
+                    value={stage.color}
+                    aria-label="自定义档位颜色"
+                    onChange={(event) => updateStage(selectedStage, { color: event.target.value })}
+                  />
+                  <span style={{ background: stage.color }} />
+                </label>
+              </div>
             </div>
-            <div className="color-swatches">
-              {DPI_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={cx('color-swatch', stage.color.toLowerCase() === color.toLowerCase() && 'is-active')}
-                  style={{ background: color }}
-                  aria-label={`使用颜色 ${color}`}
-                  aria-pressed={stage.color.toLowerCase() === color.toLowerCase()}
-                  onClick={() => updateStage(selectedStage, { color })}
-                />
-              ))}
-              <label className="custom-color" title="自定义颜色">
-                <input
-                  type="color"
-                  value={stage.color}
-                  aria-label="自定义档位颜色"
-                  onChange={(event) => updateStage(selectedStage, { color: event.target.value })}
-                />
-                <span style={{ background: stage.color }} />
-              </label>
-            </div>
-          </div>
+          )}
 
           {note && <div className="inline-note is-warning">{note}</div>}
 
@@ -571,7 +579,9 @@ export function DpiPage({
             <span className="section-kicker">STAGE OVERVIEW</span>
             <h2>七个档位</h2>
           </div>
-          <span className="panel-note">点击编辑 · 颜色对应指示灯</span>
+          <span className="panel-note">
+            {rapoo ? '点击编辑档位' : '点击编辑 · 颜色对应指示灯'}
+          </span>
         </div>
         <div className="stage-rail">
           {dpi.stages.map((item, index) => {
@@ -606,34 +616,11 @@ export function DpiPage({
         </div>
       </section>
 
-      <button type="button" className="indicator-summary panel" onClick={onNavigateLighting}>
-        <span
-          className="indicator-summary-orb"
-          style={{
-            background: activeStage.color,
-            boxShadow: `0 0 28px ${hexToRgba(activeStage.color, 0.55)}`,
-          }}
-        />
-        <span className="indicator-summary-copy">
-          <small>DPI INDICATOR</small>
-          <strong>
-            {dpi.indicator.enabled
-              ? `${dpi.indicator.effect === 'breath' ? '呼吸' : '常亮'} · 亮度 ${dpi.indicator.brightness}%`
-              : '指示灯已关闭'}
-          </strong>
-          <span>每档 DPI 使用对应颜色；档位颜色可写入鼠标，亮度与模式仅保存在本机</span>
-        </span>
-        <span className="indicator-summary-action">
-          调节灯效
-          <ArrowRight size={16} />
-        </span>
-      </button>
-
       <Modal
         open={resetOpen}
         onClose={() => setResetOpen(false)}
         title="恢复默认 DPI 设置？"
-        description="7 个档位、X/Y 轴设置与指示灯颜色将恢复为默认值。"
+        description="7 个档位与 X/Y 轴设置将恢复为默认值。"
         size="compact"
         footer={
           <>
@@ -644,7 +631,7 @@ export function DpiPage({
               type="button"
               className="primary-button"
               onClick={() => {
-                onChange({ ...createDefaultDpi(), indicator: dpi.indicator });
+                onChange(createDefaultDpi());
                 setSelectedStage(2);
                 setResetOpen(false);
               }}

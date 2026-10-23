@@ -4,7 +4,6 @@ import {
   Crosshair,
   Download,
   Gauge,
-  Lightbulb,
   MoreHorizontal,
   Mouse,
   Pencil,
@@ -16,9 +15,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MODEL_INFO } from '../defaults';
 import { BUTTON_ORDER } from '../functions';
-import type { HidPhase } from '../hid/useHecateDevice';
+import type { DeviceModelInfo } from '../hid/deviceModels';
+import type { HidPhase } from '../hid/useMouseDevice';
 import type { PageId, Profile } from '../types';
 import { cx, formatDateTime } from '../utils';
 
@@ -34,6 +33,7 @@ interface SidebarProps {
   onDeleteProfile: (profile: Profile) => void;
   onExportProfile: (profile: Profile) => void;
   devicePhase: HidPhase;
+  model: DeviceModelInfo;
   open: boolean;
   onClose: () => void;
 }
@@ -47,7 +47,6 @@ const NAV_ITEMS: Array<{
   { id: 'keys', label: '按键设定', hint: '6 键', icon: Mouse },
   { id: 'dpi', label: 'DPI 设置', hint: '7 档', icon: Crosshair },
   { id: 'performance', label: '性能与校准', hint: '', icon: Gauge },
-  { id: 'lighting', label: '灯效', hint: 'DPI 灯', icon: Lightbulb },
   { id: 'macros', label: '宏管理', hint: '', icon: Workflow },
 ];
 
@@ -69,6 +68,7 @@ export function Sidebar({
   onDeleteProfile,
   onExportProfile,
   devicePhase,
+  model,
   open,
   onClose,
 }: SidebarProps) {
@@ -77,7 +77,9 @@ export function Sidebar({
   const menuProfile = menu ? profiles.find((profile) => profile.id === menu.id) : null;
   const deviceState =
     devicePhase === 'connected'
-      ? { dot: 'is-online', label: '硬件已连接', tag: 'WebHID' }
+      ? model.verified
+        ? { dot: 'is-online', label: '硬件已连接', tag: 'WebHID' }
+        : { dot: 'is-online', label: '接收器已连接', tag: '仅发送' }
       : devicePhase === 'requesting' || devicePhase === 'connecting'
         ? { dot: 'is-busy', label: '正在连接', tag: '请稍候' }
         : devicePhase === 'error'
@@ -127,8 +129,10 @@ export function Sidebar({
             </div>
             <div className="device-title">
               <span>DEVICE</span>
-              <h2>{MODEL_INFO.shortName}</h2>
-              <p>{MODEL_INFO.sensor} · 三模无线</p>
+              <h2>{model.shortName}</h2>
+              <p>
+                {model.sensor} · {model.connection}
+              </p>
             </div>
           </div>
           <div className="device-status-row">
@@ -139,11 +143,11 @@ export function Sidebar({
           <div className="device-specs">
             <div>
               <span>最高 DPI</span>
-              <strong>{MODEL_INFO.maxDpi}</strong>
+              <strong>{model.maxDpi}</strong>
             </div>
             <div>
               <span>回报率</span>
-              <strong>{MODEL_INFO.polling}</strong>
+              <strong>{model.polling}</strong>
             </div>
           </div>
         </section>
@@ -246,11 +250,11 @@ export function Sidebar({
             <ShieldCheck size={15} />
             <span>
               配置默认保存在本机浏览器
-              <small>连接后可写入按键、DPI 与性能，写入前需确认</small>
+              <small>连接后可写入或发送按键、DPI 与性能，操作前需确认</small>
             </span>
           </div>
           <div className="sidebar-version">
-            <span>WEB CONFIG v1.4</span>
+            <span>WEB CONFIG v1.5</span>
             <span>非官方</span>
           </div>
         </div>

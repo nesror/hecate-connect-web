@@ -5,7 +5,7 @@ import {
   Menu,
   Upload,
 } from 'lucide-react';
-import type { HidPhase } from '../hid/useHecateDevice';
+import type { HidPhase } from '../hid/useMouseDevice';
 import { Brand } from './Brand';
 import { cx, formatDateTime } from '../utils';
 
@@ -13,6 +13,7 @@ interface TopBarProps {
   savedAt: string | null;
   devicePhase: HidPhase;
   deviceBusy: boolean;
+  deviceName: string;
   onOpenDevice: () => void;
   onMenu: () => void;
   onExport: () => void;
@@ -66,6 +67,7 @@ export function TopBar({
   savedAt,
   devicePhase,
   deviceBusy,
+  deviceName,
   onOpenDevice,
   onMenu,
   onExport,
@@ -91,7 +93,7 @@ export function TopBar({
           aria-label={`设备连接：${status.label}`}
         >
           <span className={cx('status-dot', status.tone)} />
-          <span className="connection-name">G3M PRO</span>
+          <span className="connection-name">{deviceName}</span>
           <span className="connection-state">{status.label}</span>
         </button>
         <div className="save-chip" title="配置会自动保存到本机浏览器">

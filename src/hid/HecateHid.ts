@@ -1,5 +1,6 @@
 import { BUTTON_META } from '../functions';
 import type { Binding, ButtonId, Profile } from '../types';
+import { describeHidDevice, type HidDescriptor } from './descriptor';
 import {
   assignmentAt,
   assignmentForBinding,
@@ -31,26 +32,7 @@ import {
   type DeviceSettings,
 } from './profileCodec';
 
-export interface HidCollectionSummary {
-  usagePage: number;
-  usage: number;
-  type: number;
-  inputReportIds: number[];
-  outputReportIds: number[];
-  featureReportIds: number[];
-}
-
-export interface HidDescriptor {
-  vendorId: number;
-  productId: number;
-  productName: string;
-  manufacturerName: string;
-  serialNumber: string;
-  collections: HidCollectionSummary[];
-  inputReportIds: number[];
-  outputReportIds: number[];
-  featureReportIds: number[];
-}
+export type { HidDescriptor } from './descriptor';
 
 export interface CommandTrace {
   command: number;
@@ -148,28 +130,6 @@ function errorMessage(error: unknown): string {
   return String(error);
 }
 
-function flattenCollections(
-  source: readonly HIDCollectionInfo[],
-  target: HIDCollectionInfo[] = [],
-): HIDCollectionInfo[] {
-  for (const collection of source) {
-    target.push(collection);
-    if (collection.children?.length) flattenCollections(collection.children, target);
-  }
-  return target;
-}
-
-function collectReportIds(
-  collections: HIDCollectionInfo[],
-  key: 'inputReports' | 'outputReports' | 'featureReports',
-): number[] {
-  const ids = new Set<number>();
-  for (const collection of collections) {
-    for (const report of collection[key] ?? []) ids.add(report.reportId);
-  }
-  return [...ids].sort((left, right) => left - right);
-}
-
 function trace(response: HidResponse): CommandTrace {
   return {
     command: response.command,
@@ -217,25 +177,7 @@ export class HecateHid {
   }
 
   get descriptor(): HidDescriptor {
-    const collections = flattenCollections(this.device.collections ?? []);
-    return {
-      vendorId: this.device.vendorId,
-      productId: this.device.productId,
-      productName: this.device.productName,
-      manufacturerName: this.device.manufacturerName,
-      serialNumber: this.device.serialNumber,
-      collections: collections.map((collection) => ({
-        usagePage: collection.usagePage,
-        usage: collection.usage,
-        type: collection.type,
-        inputReportIds: (collection.inputReports ?? []).map((report) => report.reportId),
-        outputReportIds: (collection.outputReports ?? []).map((report) => report.reportId),
-        featureReportIds: (collection.featureReports ?? []).map((report) => report.reportId),
-      })),
-      inputReportIds: collectReportIds(collections, 'inputReports'),
-      outputReportIds: collectReportIds(collections, 'outputReports'),
-      featureReportIds: collectReportIds(collections, 'featureReports'),
-    };
+    return describeHidDevice(this.device);
   }
 
   async open(): Promise<void> {

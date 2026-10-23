@@ -16,14 +16,14 @@ import { PageHeader } from '../components/PageHeader';
 import { Modal, Range, Segmented, Toggle } from '../components/ui';
 import { BUTTON_DELAY_OPTIONS, createDefaultPerformance, MODEL_INFO } from '../defaults';
 import { POLLING_OPTIONS } from '../functions';
-import type { HecateController } from '../hid/useHecateDevice';
+import type { MouseController } from '../hid/useMouseDevice';
 import type { PerformanceSettings, PollingRate, Profile, ToastMessage } from '../types';
 import { cx } from '../utils';
 
 interface PerformancePageProps {
   profile: Profile;
   onChange: (performance: PerformanceSettings) => void;
-  device: HecateController;
+  device: MouseController;
   notify: (toast: Omit<ToastMessage, 'id'>) => void;
   onOpenDevice: () => void;
 }
@@ -43,6 +43,7 @@ export function PerformancePage({
 }: PerformancePageProps) {
   const performance = profile.performance;
   const [resetOpen, setResetOpen] = useState(false);
+  const rapoo = device.family === 'rapoo';
 
   const update = (patch: Partial<PerformanceSettings>) => {
     onChange({ ...performance, ...patch });
@@ -59,7 +60,11 @@ export function PerformancePage({
       <PageHeader
         kicker="SENSOR · POLLING · RESPONSE"
         title="性能与校准"
-        description="回报率、去抖、LOD 与直线/波纹修正可直接写入鼠标；Windows 指针、滚轮与双击速度属于系统设置，仅保存在本机配置。"
+        description={
+          rapoo
+            ? '回报率、去抖、LOD 与直线/波纹修正可发送到 Rapoo 接收器；接收器无法回读，Windows 指针、滚轮与双击速度仍只保存在本机配置。'
+            : '回报率、去抖、LOD 与直线/波纹修正可直接写入鼠标；Windows 指针、滚轮与双击速度属于系统设置，仅保存在本机配置。'
+        }
         actions={
           <>
             <DeviceWriteButton
@@ -67,7 +72,11 @@ export function PerformancePage({
               profile={profile}
               sections={{ bindings: false, dpi: false, performance: true }}
               title="性能设置"
-              description="将回报率、去抖延时、静默高度与传感器修正写入鼠标板载配置，并即时应用回报率。"
+              description={
+                rapoo
+                  ? '将回报率、去抖延时、静默高度与传感器修正发送到 Rapoo 接收器。接收器不支持回读，发送后无法确认是否生效。'
+                  : '将回报率、去抖延时、静默高度与传感器修正写入鼠标板载配置，并即时应用回报率。'
+              }
               onOpenDevice={onOpenDevice}
               notify={notify}
             />
@@ -85,7 +94,7 @@ export function PerformancePage({
             <Gauge size={18} />
           </div>
           <div>
-            <span>USB 回报率</span>
+            <span>当前回报率</span>
             <strong>
               {performance.pollingRate.toLocaleString('en-US')}
               <small> Hz</small>
@@ -138,7 +147,7 @@ export function PerformancePage({
               <span className="section-kicker">REPORT RATE</span>
               <h2>回报率</h2>
             </div>
-            <span className="panel-note">USB 有线模式</span>
+            <span className="panel-note">{rapoo ? '2.4G 无线' : 'USB 有线模式'}</span>
           </div>
 
           <div className="polling-hero">
@@ -243,7 +252,11 @@ export function PerformancePage({
 
           <div className="response-note">
             <Sparkles size={15} />
-            <span>PAW3395 支持 1–3 mm 静默高度；连接鼠标后，LOD 会与去抖设置一起写入板载配置。</span>
+            <span>
+              {rapoo
+                ? 'Rapoo 的静默高度会与去抖设置一起发送到接收器；接收器无法回读，发送后请在鼠标上实际确认手感。'
+                : 'PAW3395 支持 1–3 mm 静默高度；连接鼠标后，LOD 会与去抖设置一起写入板载配置。'}
+            </span>
           </div>
         </section>
       </div>
@@ -290,7 +303,9 @@ export function PerformancePage({
           </div>
 
           <div className="inline-note">
-            保持两项关闭可以获得最原始的传感器输入。官方驱动的配置写入中角度捕捉始终为关闭，固件不提供该开关。
+            {rapoo
+              ? '保持两项关闭可以获得最原始的传感器输入。Rapoo 的传感器角度与玻璃模式未纳入本工具，不会发送。'
+              : '保持两项关闭可以获得最原始的传感器输入。官方驱动的配置写入中角度捕捉始终为关闭，固件不提供该开关。'}
           </div>
         </section>
 
@@ -400,22 +415,23 @@ export function PerformancePage({
       <section className="panel runtime-panel">
         <div className="runtime-copy">
           <span className="section-kicker">ONBOARD MEMORY</span>
-          <h2>硬件写入范围</h2>
+          <h2>硬件操作范围</h2>
           <p>
-            连接鼠标后，可把回报率、去抖、LOD 与直线/波纹修正写入板载配置，并即时应用回报率；
-            写入完成后会自动回读核对。Windows 指针、滚轮与双击速度仍由系统管理。
+            {rapoo
+              ? '连接接收器后，可把回报率、去抖、LOD 与直线/波纹修正发送到 Rapoo；接收器不支持回读，发送后无法确认是否生效。Windows 指针、滚轮与双击速度仍由系统管理。'
+              : '连接鼠标后，可把回报率、去抖、LOD 与直线/波纹修正写入板载配置，并即时应用回报率；写入完成后会自动回读核对。Windows 指针、滚轮与双击速度仍由系统管理。'}
           </p>
         </div>
         <div className="runtime-list">
-          <div className="runtime-item is-ok">
-            <Check size={15} />
-            <span>回报率写入</span>
-            <strong>可用</strong>
+          <div className={rapoo ? 'runtime-item' : 'runtime-item is-ok'}>
+            {rapoo ? <Info size={15} /> : <Check size={15} />}
+            <span>回报率发送</span>
+            <strong>{rapoo ? '未验证' : '可用'}</strong>
           </div>
-          <div className="runtime-item is-ok">
-            <Check size={15} />
+          <div className={rapoo ? 'runtime-item' : 'runtime-item is-ok'}>
+            {rapoo ? <Info size={15} /> : <Check size={15} />}
             <span>LOD / 去抖 / 传感器修正</span>
-            <strong>可用</strong>
+            <strong>{rapoo ? '未验证' : '可用'}</strong>
           </div>
           <div className="runtime-item is-ok">
             <Check size={15} />
